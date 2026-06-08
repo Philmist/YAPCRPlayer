@@ -2,6 +2,7 @@
 
 #include "peercast/peercast_url.h"
 #include "peercast/stream_resolver.h"
+#include "peercast/channel_info.h"
 
 // StreamResolver の analyse() はプライベートメソッドなのでテスト用に公開するために
 // ここでは同等の実装を直接 QRegularExpression で検証する。
@@ -130,6 +131,180 @@ private slots:
         const QString playlist = QStringLiteral("no stream url here");
         const auto m = rx.match(playlist);
         QVERIFY(!m.hasMatch());
+    }
+
+    // ---- parseViewXml ----
+
+    // フィクスチャ: PeerCastStation の viewxml 応答を模したテスト用 XML
+    // 全フィールドが XML 属性（PCRPlayer XmlParser.h の <xmlattr>. で確認済み）
+    static QByteArray makeViewXml(const QString& targetId) {
+        return QStringLiteral(
+            "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+            "<peercast>"
+            "  <channels_relayed>"
+            "    <channel id=\"AAAA1111BBBB2222CCCC3333DDDD4444\" name=\"Other Channel\""
+            "             bitrate=\"128\" type=\"MP3\" genre=\"Other\" desc=\"other desc\""
+            "             url=\"http://example.com\" uptime=\"01:00:00\""
+            "             comment=\"other comment\" skips=\"0\" age=\"0\" bcflags=\"0\">"
+            "      <relay listeners=\"0\" relays=\"0\" hosts=\"1\""
+            "             status=\"RECEIVING\" firewalled=\"0\"/>"
+            "      <track title=\"Other Title\" artist=\"Other Artist\""
+            "             album=\"\" genre=\"\" contact=\"\"/>"
+            "    </channel>"
+            "    <channel id=\"%1\" name=\"Test Channel\""
+            "             bitrate=\"256\" type=\"FLV\" genre=\"アニメ\" desc=\"テスト放送\""
+            "             url=\"http://test.example.com\" uptime=\"00:30:00\""
+            "             comment=\"コメントです\" skips=\"0\" age=\"0\" bcflags=\"0\">"
+            "      <relay listeners=\"3\" relays=\"1\" hosts=\"2\""
+            "             status=\"RECEIVING\" firewalled=\"0\"/>"
+            "      <track title=\"テストタイトル\" artist=\"テストアーティスト\""
+            "             album=\"テストアルバム\" genre=\"\" contact=\"http://contact.example.com\"/>"
+            "    </channel>"
+            "  </channels_relayed>"
+            "</peercast>")
+            .arg(targetId)
+            .toUtf8();
+    }
+
+    void parseViewXml_found_matching_channel() {
+        const QString id = QStringLiteral("1234567890ABCDEF1234567890ABCDEF");
+        const auto info = yapcr::peercast::parseViewXml(makeViewXml(id), id);
+
+        QVERIFY(info.valid);
+        QCOMPARE(info.id,      id);
+        QCOMPARE(info.name,    QStringLiteral("Test Channel"));
+        QCOMPARE(info.bitrate, QStringLiteral("256"));
+        QCOMPARE(info.type,    QStringLiteral("FLV"));
+        QCOMPARE(info.genre,   QStringLiteral("アニメ"));
+        QCOMPARE(info.desc,    QStringLiteral("テスト放送"));
+        QCOMPARE(info.comment, QStringLiteral("コメントです"));
+    }
+
+    void parseViewXml_relay_attributes() {
+        const QString id = QStringLiteral("1234567890ABCDEF1234567890ABCDEF");
+        const auto info = yapcr::peercast::parseViewXml(makeViewXml(id), id);
+
+        QVERIFY(info.valid);
+        QCOMPARE(info.listeners, 3);
+        QCOMPARE(info.relays,    1);
+        QCOMPARE(info.status,    QStringLiteral("RECEIVING"));
+        QVERIFY(!info.firewalled);
+    }
+
+    void parseViewXml_track_attributes() {
+        const QString id = QStringLiteral("1234567890ABCDEF1234567890ABCDEF");
+        const auto info = yapcr::peercast::parseViewXml(makeViewXml(id), id);
+
+        QVERIFY(info.valid);
+        QCOMPARE(info.trackTitle,   QStringLiteral("テストタイトル"));
+        QCOMPARE(info.trackArtist,  QStringLiteral("テストアーティスト"));
+        QCOMPARE(info.trackAlbum,   QStringLiteral("テストアルバム"));
+        QCOMPARE(info.trackContact, QStringLiteral("http://contact.example.com"));
+    }
+
+    void parseViewXml_id_case_insensitive() {
+        // ID は大文字小文字無視で一致（PCRPlayer の _wcsicmp に相当）
+        const QString id      = QStringLiteral("1234567890abcdef1234567890abcdef");
+        const QString idUpper = QStringLiteral("1234567890ABCDEF1234567890ABCDEF");
+        const auto info = yapcr::peercast::parseViewXml(makeViewXml(idUpper), id);
+        QVERIFY(info.valid);
+    }
+
+    void parseViewXml_no_match_returns_invalid() {
+        const auto info = yapcr::peercast::parseViewXml(
+            makeViewXml(QStringLiteral("1234567890ABCDEF1234567890ABCDEF")),
+            QStringLiteral("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"));
+        QVERIFY(!info.valid);
+    }
+
+    void parseViewXml_selects_correct_channel_from_multiple() {
+        // AAAA... ではなく target ID のチャンネルが返ること
+        const QString id = QStringLiteral("1234567890ABCDEF1234567890ABCDEF");
+        const auto info = yapcr::peercast::parseViewXml(makeViewXml(id), id);
+        QVERIFY(info.valid);
+        QCOMPARE(info.name, QStringLiteral("Test Channel"));  // AAAA... の "Other Channel" ではない
+    }
+
+    void parseViewXml_empty_xml_returns_invalid() {
+        const auto info = yapcr::peercast::parseViewXml(
+            QByteArray{}, QStringLiteral("1234567890ABCDEF1234567890ABCDEF"));
+        QVERIFY(!info.valid);
+    }
+
+    // ---- formatTitle ----
+
+    void formatTitle_with_type() {
+        yapcr::peercast::ChannelInfo info;
+        info.valid = true;
+        info.name  = QStringLiteral("テストチャンネル");
+        info.type  = QStringLiteral("FLV");
+        QCOMPARE(yapcr::peercast::formatTitle(info),
+                 QStringLiteral("テストチャンネル (FLV)"));
+    }
+
+    void formatTitle_without_type() {
+        yapcr::peercast::ChannelInfo info;
+        info.valid = true;
+        info.name  = QStringLiteral("テストチャンネル");
+        QCOMPARE(yapcr::peercast::formatTitle(info),
+                 QStringLiteral("テストチャンネル"));
+    }
+
+    void formatTitle_invalid_returns_empty() {
+        QVERIFY(yapcr::peercast::formatTitle({}).isEmpty());
+    }
+
+    // ---- formatStatus ----
+
+    void formatStatus_full_fields() {
+        yapcr::peercast::ChannelInfo info;
+        info.valid        = true;
+        info.name         = QStringLiteral("チャンネル");
+        info.type         = QStringLiteral("FLV");
+        info.genre        = QStringLiteral("アニメ");
+        info.desc         = QStringLiteral("説明");
+        info.comment      = QStringLiteral("コメント");
+        info.trackArtist  = QStringLiteral("アーティスト");
+        info.trackTitle   = QStringLiteral("タイトル");
+        info.listeners    = 5;
+        info.relays       = 2;
+        const QString status = yapcr::peercast::formatStatus(info);
+        // 各フィールドが含まれているか確認
+        QVERIFY(status.contains(QStringLiteral("チャンネル")));
+        QVERIFY(status.contains(QStringLiteral("FLV")));
+        QVERIFY(status.contains(QStringLiteral("アニメ")));
+        QVERIFY(status.contains(QStringLiteral("説明")));
+        QVERIFY(status.contains(QStringLiteral("コメント")));
+        QVERIFY(status.contains(QStringLiteral("アーティスト")));
+        QVERIFY(status.contains(QStringLiteral("タイトル")));
+        QVERIFY(status.contains(QStringLiteral("5")));
+        QVERIFY(status.contains(QStringLiteral("2")));
+    }
+
+    void formatStatus_empty_genre_desc_omits_bracket() {
+        yapcr::peercast::ChannelInfo info;
+        info.valid = true;
+        info.name  = QStringLiteral("チャンネル");
+        info.type  = QStringLiteral("MP3");
+        // genre, desc が空
+        const QString status = yapcr::peercast::formatStatus(info);
+        QVERIFY(!status.contains(QStringLiteral("[")));
+        QVERIFY(!status.contains(QStringLiteral("]")));
+    }
+
+    void formatStatus_no_listeners_omits_count() {
+        yapcr::peercast::ChannelInfo info;
+        info.valid     = true;
+        info.name      = QStringLiteral("チャンネル");
+        // listeners/relays = -1（未取得）
+        const QString status = yapcr::peercast::formatStatus(info);
+        // [N/M] 形式は現れない
+        QVERIFY(!status.contains(QStringLiteral("/-1")));
+        QVERIFY(!status.contains(QStringLiteral("-1/")));
+    }
+
+    void formatStatus_invalid_returns_empty() {
+        QVERIFY(yapcr::peercast::formatStatus({}).isEmpty());
     }
 };
 

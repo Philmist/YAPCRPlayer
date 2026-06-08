@@ -5,7 +5,10 @@
 #include "player/mpv_backend.h"
 #include "common/version.h"
 
+#include <QAction>
 #include <QDebug>
+#include <QMenu>
+#include <QMenuBar>
 #include <QShowEvent>
 #include <QStatusBar>
 #include <QString>
@@ -47,6 +50,20 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
             this,     &MainWindow::onTitleChanged);
     connect(session_, &SessionController::statusMessage,
             this,     &MainWindow::onStatusMessage);
+
+    // M2: 最小メニューバー（再接続/切断/再読込）
+    {
+        QMenu* menu = menuBar()->addMenu(tr("操作(&O)"));
+
+        actBump_   = menu->addAction(tr("再接続 (&B)ump"));
+        actStop_   = menu->addAction(tr("切断 (&S)top"));
+        menu->addSeparator();
+        actReload_ = menu->addAction(tr("再読込 (&R)eload"));
+
+        connect(actBump_,   &QAction::triggered, session_, &SessionController::manualBump);
+        connect(actStop_,   &QAction::triggered, session_, &SessionController::manualStop);
+        connect(actReload_, &QAction::triggered, session_, &SessionController::manualReload);
+    }
 
     // ウィンドウタイトルの初期値
     setWindowTitle(QString::fromLatin1(common::appName()));

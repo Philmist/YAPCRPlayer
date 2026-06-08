@@ -2,6 +2,8 @@
 
 #include <QMainWindow>
 
+class QAction;
+
 namespace yapcr::player {
 class MpvBackend;
 }
@@ -51,6 +53,11 @@ private:
     player::MpvBackend*      mpv_{nullptr};
     SessionController*       session_{nullptr};
     bool                     attached_{false};
+
+    // M2: 手動操作アクション
+    QAction* actBump_{nullptr};
+    QAction* actStop_{nullptr};
+    QAction* actReload_{nullptr};
 
     // openMedia が attach より先に呼ばれた場合に備えて引数を保持する
     struct PendingMedia {

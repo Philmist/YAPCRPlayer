@@ -69,6 +69,24 @@ bool MpvBackend::attach(quintptr wid) {
         // INFO レベル以上のログを要求
         checkMpvError(mpv_request_log_messages(h, "info"));
 
+        // watchdog 用プロパティ監視を登録する
+        checkMpvError(mpv_observe_property(h, 0, "core-idle",          MPV_FORMAT_FLAG));
+        checkMpvError(mpv_observe_property(h, 0, "demuxer-cache-time", MPV_FORMAT_DOUBLE));
+
+        // HTTP ライブストリームの lavf 自動再接続を試みる。
+        // 注意: オプション名と値は mpv のバージョン・ビルドによって異なる可能性がある。
+        //       エラーは致命的ではないためログ出力のみで続行する。
+        // PCRPlayer の architecture-decisions.md Q7 「mpv cache + lavf reconnect」に対応。
+        {
+            const int err = mpv_set_option_string(
+                h, "stream-lavf-o",
+                "reconnect=1,reconnect_streamed=1,reconnect_delay_max=5");
+            if (err < 0) {
+                // このバージョンの mpv / ffmpeg では未サポートの可能性があるため無視する
+                (void)err;
+            }
+        }
+
     } catch (const std::exception&) {
         mpv_terminate_destroy(h);
         return false;
@@ -133,6 +151,24 @@ void MpvBackend::onWakeup() {
             emit logMessage(QString::fromUtf8(msg->prefix),
                             QString::fromUtf8(msg->level),
                             QString::fromUtf8(msg->text).trimmed());
+            break;
+        }
+
+        case MPV_EVENT_PROPERTY_CHANGE: {
+            auto* prop = static_cast<mpv_event_property*>(event->data);
+            if (!prop || prop->data == nullptr) { break; }
+
+            if (QLatin1String(prop->name) == QLatin1String("core-idle")) {
+                if (prop->format == MPV_FORMAT_FLAG) {
+                    const bool idle = (*static_cast<int*>(prop->data) != 0);
+                    emit coreIdleChanged(idle);
+                }
+            } else if (QLatin1String(prop->name) == QLatin1String("demuxer-cache-time")) {
+                if (prop->format == MPV_FORMAT_DOUBLE) {
+                    const double t = *static_cast<double*>(prop->data);
+                    emit cacheTimeChanged(t);
+                }
+            }
             break;
         }
 

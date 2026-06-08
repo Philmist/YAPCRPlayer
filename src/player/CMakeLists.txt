@@ -1,6 +1,8 @@
 add_library(player STATIC
     src/mpv_backend.cpp
+    src/watchdog.cpp
     include/player/mpv_backend.h
+    include/player/watchdog.h
 )
 add_library(yapcr::player ALIAS player)
 

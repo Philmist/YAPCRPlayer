@@ -50,6 +50,12 @@ signals:
     // mpv のログメッセージ。
     void logMessage(const QString& prefix, const QString& level, const QString& text);
 
+    // core-idle プロパティが変化した（idle=true: 映像供給停止中）。
+    void coreIdleChanged(bool idle);
+
+    // demuxer-cache-time プロパティが変化した（キャッシュ内の総秒数）。
+    void cacheTimeChanged(double seconds);
+
 private:
     // mpv の wakeup callback（内部スレッドから呼ばれる）。
     // GUI スレッドの onWakeup() をキューイングするだけ。mpv API は呼ばない。
