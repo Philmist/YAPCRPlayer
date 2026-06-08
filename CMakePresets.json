@@ -1,0 +1,23 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": { "major": 3, "minor": 21 },
+  "configurePresets": [
+    {
+      "name": "msvc-ninja",
+      "displayName": "MSVC 2022/2026 + Ninja (x64)",
+      "description": "vcvars64 環境で実行すること（cl/ninja に PATH が通っている前提）",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/msvc-ninja",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_PREFIX_PATH": "C:/Qt/6.11.1/msvc2022_64"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "msvc-ninja",
+      "configurePreset": "msvc-ninja"
+    }
+  ]
+}

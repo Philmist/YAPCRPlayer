@@ -7,6 +7,9 @@
 build-*/
 /out/
 cmake-build-*/
+
+# ---- ダウンロードした外部依存（scripts/fetch-mpv-dev.ps1 が取得） ----
+/third_party/
 [Dd]ebug/
 [Rr]elease/
 [Xx]64/
