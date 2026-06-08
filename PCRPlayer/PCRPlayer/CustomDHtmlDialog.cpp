@@ -1,0 +1,929 @@
+// CustomDHtmlDialog.cpp : 実装ファイル
+//
+
+#include "stdafx.h"
+#include "PCRPlayer.h"
+#include "CustomDHTMLDialog.h"
+
+BEGIN_INTERFACE_MAP(CCustomControlSite, CBrowserControlSite)  
+	INTERFACE_PART(CCustomControlSite,
+		IID_IServiceProvider,
+		ServiceProvider)  
+	INTERFACE_PART(CCustomControlSite,
+		IID_IProtectFocus,
+		ProtectFocus)  
+END_INTERFACE_MAP()  
+
+CCustomControlSite::CCustomControlSite(COleControlContainer* pCtrlCont, CDHtmlDialog *pHandler) :
+	CBrowserControlSite(pCtrlCont, pHandler)
+{
+}
+
+
+CCustomControlSite::~CCustomControlSite()
+{
+}
+
+ULONG FAR EXPORT CCustomControlSite::XServiceProvider::AddRef()
+{
+	METHOD_PROLOGUE(CCustomControlSite, ServiceProvider)
+		return pThis->ExternalAddRef();
+}
+
+ULONG FAR EXPORT CCustomControlSite::XServiceProvider::Release()
+{                            
+	METHOD_PROLOGUE(CCustomControlSite, ServiceProvider)
+		return pThis->ExternalRelease();
+}
+
+HRESULT FAR EXPORT CCustomControlSite::XServiceProvider::QueryInterface(REFIID riid,void** ppvObj)
+{
+	METHOD_PROLOGUE(CCustomControlSite, ServiceProvider)
+		HRESULT hr = (HRESULT)pThis->ExternalQueryInterface(&riid, ppvObj);
+	return hr;
+}
+
+STDMETHODIMP CCustomControlSite::XServiceProvider::QueryService(REFGUID guidService,REFIID riid,void** ppvObject)
+{
+	if (guidService == SID_SProtectFocus && 
+		riid == IID_IProtectFocus)
+	{
+		METHOD_PROLOGUE(CCustomControlSite, ServiceProvider)
+			HRESULT hr = (HRESULT)pThis->ExternalQueryInterface(&riid, ppvObject);
+		return hr;
+	} 
+	else 
+	{
+		*ppvObject = NULL;
+	}
+	return E_NOINTERFACE;
+}
+
+// ProtectFocus Methods
+ULONG FAR EXPORT CCustomControlSite::XProtectFocus::AddRef()
+{
+	METHOD_PROLOGUE(CCustomControlSite, ProtectFocus)
+		return pThis->ExternalAddRef();
+}
+
+ULONG FAR EXPORT CCustomControlSite::XProtectFocus::Release()
+{                            
+	METHOD_PROLOGUE(CCustomControlSite, ProtectFocus)
+		return pThis->ExternalRelease();
+}
+
+HRESULT FAR EXPORT CCustomControlSite::XProtectFocus::QueryInterface(REFIID riid,void** ppvObj)
+{
+	METHOD_PROLOGUE(CCustomControlSite, ProtectFocus)
+		HRESULT hr = (HRESULT)pThis->ExternalQueryInterface(&riid, ppvObj);
+	return hr;
+}
+
+STDMETHODIMP CCustomControlSite::XProtectFocus::AllowFocusChange(BOOL *pfAllow)
+{
+	METHOD_PROLOGUE(CCustomControlSite, ProtectFocus)
+		//pThis->m_pHandler->RedrawWindow();
+	*pfAllow = FALSE;
+	return S_OK;
+}
+
+
+
+// CCustomDHtmlDialog ダイアログ
+
+IMPLEMENT_DYNCREATE(CCustomDHtmlDialog, CDHtmlDialog)
+
+CCustomDHtmlDialog::CCustomDHtmlDialog()
+	: CDHtmlDialog()
+{
+
+}
+
+CCustomDHtmlDialog::CCustomDHtmlDialog(UINT nIDTemplate, CWnd* pParent /*=NULL*/)
+	: CDHtmlDialog(nIDTemplate, /*IDR_HTML_CUSTOMDHTML*/0, pParent)
+{
+	
+}
+
+CCustomDHtmlDialog::~CCustomDHtmlDialog()
+{
+}
+
+BOOL CCustomDHtmlDialog::CreateControlSite(COleControlContainer* pContainer, 
+	COleControlSite** ppSite, UINT /* nID */, REFCLSID /* clsid */)
+{
+	if(ppSite == NULL)
+	{
+		ASSERT(FALSE);
+		return FALSE;
+	}
+
+	CCustomControlSite *pBrowserSite = 
+		new CCustomControlSite(pContainer, this);
+	if (!pBrowserSite)
+		return FALSE;
+
+	*ppSite = pBrowserSite;
+	return TRUE;
+}
+
+
+
+
+
+HWND CCustomDHtmlDialog::GetSafeBrowserHwnd()
+{
+	HWND hwnd = GetSafeHwnd();
+	if (hwnd)
+	{
+		hwnd = ::FindWindowEx(hwnd, NULL, _T("Shell Embedding"), NULL);
+		if (hwnd)
+		{
+			hwnd = ::FindWindowEx(hwnd, NULL, _T("Shell DocObject View"), NULL); 
+			if (hwnd)
+			{
+				return ::FindWindowEx(hwnd, NULL, _T("Internet Explorer_Server"), NULL);
+			}
+		}
+	}
+	return hwnd;
+}
+
+
+
+
+BOOL CCustomDHtmlDialog::StoreScroll()
+{
+	return GetScrollParam(custom_.scrollTop, custom_.scrollHeight, custom_.clientHeight);
+}
+
+BOOL CCustomDHtmlDialog::RestoreScroll()
+{
+	CComPtr<IHTMLDocument2> doc2;
+	if (!SUCCEEDED(GetDHtmlDocument(&doc2)) || !doc2) { return FALSE; }
+	CComPtr<IDispatch> disp;
+	if (SUCCEEDED(doc2->get_Script(&disp)))
+	{
+		CComQIPtr<IHTMLWindow2> win2(disp);
+		if (win2)
+		{
+			if (custom_.scrollHeight - custom_.clientHeight - custom_.scrollTop <= 0)
+			{
+				long top = 0, scrollH = 0, clientH = 0;
+				if (!GetScrollParam(top, scrollH, clientH)) { return FALSE; }
+				custom_.scroll = true;
+				return SUCCEEDED(win2->scrollTo(0, scrollH));
+			}
+			custom_.scroll = true;
+			return SUCCEEDED(win2->scrollTo(0, custom_.scrollTop));
+		}
+	}
+	return FALSE;
+}
+
+BOOL CCustomDHtmlDialog::ScrollToTop()
+{
+	CComPtr<IHTMLDocument2> doc2;
+	if (!SUCCEEDED(GetDHtmlDocument(&doc2)) || !doc2) { return FALSE; }
+
+	CComPtr<IDispatch> disp;
+	if (SUCCEEDED(doc2->get_Script(&disp)) && disp)
+	{
+		CComQIPtr<IHTMLWindow2> win2(disp);
+		if (win2)
+		{
+			custom_.scroll = true;
+			return SUCCEEDED(win2->scrollTo(0, 0));
+		}
+	}
+	return FALSE;
+}
+
+BOOL CCustomDHtmlDialog::ScrollToBottom()
+{
+	CComPtr<IHTMLDocument2> doc2;
+	if (!SUCCEEDED(GetDHtmlDocument(&doc2)) || !doc2) { return FALSE; }
+
+	CComPtr<IDispatch> disp;
+	if (SUCCEEDED(doc2->get_Script(&disp)) && disp)
+	{
+		CComQIPtr<IHTMLWindow2> win2(disp);
+		if (win2)
+		{
+			long top = 0, scrollH = 0, clientH = 0;
+			if (GetScrollParam(top, scrollH, clientH))
+			{
+				custom_.scroll = true;
+				return SUCCEEDED(win2->scrollTo(0, scrollH));
+			}
+		}
+	}
+	return FALSE;
+}
+
+BOOL CCustomDHtmlDialog::ScrollToBottomBy(long y)
+{
+	CComPtr<IHTMLDocument2> doc2;
+	if (!SUCCEEDED(GetDHtmlDocument(&doc2)) || !doc2) { return FALSE; }
+
+	CComPtr<IDispatch> disp;
+	if (SUCCEEDED(doc2->get_Script(&disp)) && disp)
+	{
+		CComQIPtr<IHTMLWindow2> win2(disp);
+		if (win2)
+		{
+			long top = 0, scrollH = 0, clientH = 0;
+			if (GetScrollParam(top, scrollH, clientH))
+			{
+				if (scrollH - clientH - top > 0)
+				{
+					custom_.scroll = true;
+					return SUCCEEDED(win2->scrollBy(0, y));
+				}
+			}
+		}
+	}
+	return FALSE;
+}
+
+
+
+BOOL CCustomDHtmlDialog::StringToIStream(const std::wstring& str, IStream** out)
+{	
+	if (!out) { return FALSE; }
+	HGLOBAL	global = ::GlobalAlloc(GMEM_MOVEABLE, str.size() * sizeof(wchar_t));
+	LPVOID data = ::GlobalLock(global);
+	memcpy(data, str.data(), str.size() * sizeof(wchar_t));
+	::GlobalUnlock(global);
+
+	CComPtr<IStream> stream;
+	if (S_OK == ::CreateStreamOnHGlobal(global, TRUE, &stream))
+	{	
+		*out = stream;
+		(*out)->AddRef();
+		return TRUE;
+	}
+	return FALSE;
+}
+
+BOOL CCustomDHtmlDialog::LoadFromString(const std::wstring& html)
+{
+	CComPtr<IStream> stream;
+	if (StringToIStream(html, &stream))
+	{
+		CComPtr<IDispatch> disp;
+		if (SUCCEEDED(m_pBrowserApp->get_Document(&disp)))
+		{
+			if (disp)
+			{
+				CComQIPtr<IPersistStreamInit> init(disp);
+				if (init)
+				{
+					CDHtmlDialog::OnBeforeNavigate(m_pBrowserApp, NULL);
+					if (SUCCEEDED(init->InitNew()))
+					{
+						if (SUCCEEDED(init->Load(stream)))
+						{
+							return TRUE;
+						}
+					}
+				}
+			}
+		}
+	}
+	return FALSE;
+}
+
+BOOL CCustomDHtmlDialog::GetDocumentElement(CComPtr<IHTMLElement>& elem)
+{
+	CComPtr<IHTMLDocument2> doc2;
+	if (!SUCCEEDED(GetDHtmlDocument(&doc2)) || !doc2) { return FALSE; }
+
+	CComQIPtr<IHTMLDocument3> doc3(doc2);
+	if (!doc3) { return FALSE; }
+
+	return (SUCCEEDED(doc3->get_documentElement(&elem)) && elem) ? TRUE : FALSE;
+}
+
+BOOL CCustomDHtmlDialog::GetDocumentElement(CComPtr<IHTMLElement2>& elem2)
+{
+	CComPtr<IHTMLElement> elem;
+	if (!GetDocumentElement(elem)) { return FALSE; }
+	return (SUCCEEDED(elem->QueryInterface(&elem2)) && elem2) ? TRUE : FALSE;
+}
+
+BOOL CCustomDHtmlDialog::GetBodyElement(CComPtr<IHTMLElement>& elem)
+{
+	CComPtr<IHTMLDocument2> doc2;
+	if (!SUCCEEDED(GetDHtmlDocument(&doc2)) || !doc2) { return FALSE; }
+	return (SUCCEEDED(doc2->get_body(&elem)) && elem) ? TRUE : FALSE;
+}
+
+BOOL CCustomDHtmlDialog::GetBodyElement(CComPtr<IHTMLElement2>& elem2)
+{
+	CComPtr<IHTMLElement> elem;
+	if (!GetBodyElement(elem)) { return FALSE; }
+	return (SUCCEEDED(elem->QueryInterface(&elem2)) && elem2) ? TRUE : FALSE;
+}
+
+BOOL CCustomDHtmlDialog::RemoveClassName(const std::wstring& search)
+{
+	CComPtr<IHTMLDocument2> doc2;
+	if (!SUCCEEDED(GetDHtmlDocument(&doc2)) || !doc2) { return FALSE; }
+
+	CComPtr<IHTMLElementCollection> c;
+	if (!SUCCEEDED(doc2->get_all(&c)) || !c) { return FALSE; }
+
+	long len = 0;
+	if (!SUCCEEDED(c->get_length(&len))) { return FALSE; }
+
+	BOOL result = FALSE;
+	for (int i = 0; i < len; ++i)
+	{
+		CComVariant vidx(i, VT_I4);
+		CComVariant vid(0, VT_I4);
+		CComPtr<IDispatch> disp;
+
+		if (!SUCCEEDED(c->item(vidx, vid, &disp)) || !disp) { continue; }
+
+		CComQIPtr<IHTMLElement> element(disp);
+		if (!element) { continue; }
+
+		CComBSTR name;
+		if (!SUCCEEDED(element->get_className(&name))) { continue; }
+		std::wstring target = CString(name).GetString();
+
+		if (target == search)
+		{
+			if (!SUCCEEDED(element->put_className(CComBSTR(L"")))) { continue; }
+			result = TRUE;
+		}
+		else if (target.find(search + L"-") == 0)
+		{
+			std::wstring anew(target.begin() + (search + L"-").size(), target.end());
+			if (!SUCCEEDED(element->put_className(CComBSTR(anew.c_str())))) { continue; }
+			result = TRUE;
+		}
+	}
+	return result;
+}
+
+double CCustomDHtmlDialog::GetZoomFactor()
+{
+	double factor = 1.0;
+	CComPtr<IHTMLDocument2> doc2;
+	if (SUCCEEDED(GetDHtmlDocument(&doc2)) && doc2)
+	{
+		CComPtr<IHTMLElement> body;
+		if (SUCCEEDED(doc2->get_body(&body)) && body)
+		{
+			CRect rect;
+			if (GetBoundingClientRect(body, rect))
+			{
+				long physical = rect.Width();
+				long logical = 0;
+				if (SUCCEEDED(body->get_offsetWidth(&logical)))
+				{
+					if (logical > 0)
+					{
+						factor = round((((double)physical * 100.0) / (double)logical) / 100.0);
+					}
+					//gl_.addLog(L"factor:%.2f physical:%d logical:%d", factor, physical, logical);
+				}
+			}
+		}
+	}
+	return factor;
+}
+
+
+BOOL CCustomDHtmlDialog::GetBoundingClientRect(const CComPtr<IHTMLElement>& element, CRect& rc)
+{
+	CComQIPtr<IHTMLElement2> element2(element);
+	if (element2)
+	{
+		CComPtr<IHTMLRect> rect;
+		if (SUCCEEDED(element2->getBoundingClientRect(&rect)) && rect)
+		{
+			if (SUCCEEDED(rect->get_left(&rc.left)) &&
+				SUCCEEDED(rect->get_top(&rc.top)) &&
+				SUCCEEDED(rect->get_right(&rc.right)) &&
+				SUCCEEDED(rect->get_bottom(&rc.bottom)))
+			{
+				return TRUE;
+			}
+		}
+	}
+	return FALSE;
+}
+
+BOOL CCustomDHtmlDialog::GetBoundingClientZoomRect(const CComPtr<IHTMLElement>& element, CRect& rc)
+{
+	if (!element) { return FALSE; }
+	if (!m_pBrowserApp) { return FALSE; }
+
+	if (!GetBoundingClientRect(element, rc)) { return FALSE; }
+
+	CComVariant vZoom = 100;
+	m_pBrowserApp->ExecWB(OLECMDID_OPTICAL_ZOOM, OLECMDEXECOPT_DONTPROMPTUSER, NULL, &vZoom);
+
+	if (vZoom.lVal != 100)
+	{
+		double factor = GetZoomFactor();
+		if (factor == 1.0 && vZoom.lVal > 0)
+		{
+			factor = (double)vZoom.lVal / 100.0;
+			rc.left = (LONG)round(rc.left * factor);
+			rc.top = (LONG)round(rc.top * factor);
+			rc.right = (LONG)round(rc.right * factor);
+			rc.bottom = (LONG)round(rc.bottom * factor);
+		}
+	}
+	return TRUE;
+}
+
+BOOL CCustomDHtmlDialog::GetScrollParam(long& scrollTop, long& scrollHeight, long& clientHeight)
+{
+	CComQIPtr<IHTMLElement2> root;
+	if (GetDocumentElement(root))
+	{
+		long top = 0, scrollH = 0, clientH = 0;
+		if (SUCCEEDED(root->get_scrollTop(&top)) &&
+			SUCCEEDED(root->get_scrollHeight(&scrollH)) &&
+			SUCCEEDED(root->get_clientHeight(&clientH)))
+		{
+			//gl_.addLog(L"root top:%d sh:%d ch:%d", top, scrollH, clientH);
+		}
+
+		if (top == 0 && clientH == 0)
+		{
+			CComQIPtr<IHTMLElement2> body;
+			if (GetBodyElement(body))
+			{
+				if (SUCCEEDED(body->get_scrollTop(&top)) &&
+					SUCCEEDED(body->get_scrollHeight(&scrollH)) &&
+					SUCCEEDED(body->get_clientHeight(&clientH)))
+				{
+					//gl_.addLog(L"body top:%d sh:%d ch:%d", top, scrollH, clientH);
+				}
+			}
+		}
+		//gl_.addLog(L"top:%d sh:%d ch:%d", top, scrollH, clientH);
+
+		scrollTop = top;
+		scrollHeight = scrollH;
+		clientHeight = clientH;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+BOOL CCustomDHtmlDialog::CreateTxtRange(CComPtr<IHTMLTxtRange>& range)
+{
+	CComPtr<IHTMLDocument2> doc2;
+	if (!SUCCEEDED(GetDHtmlDocument(&doc2)) || !doc2) { return FALSE; }
+
+	CComPtr<IHTMLElement> element;
+	if (!SUCCEEDED(doc2->get_body(&element)) || !element) { return FALSE; }
+
+	CComQIPtr<IHTMLBodyElement> body(element);
+	if (!body) { return FALSE; }
+
+	if (!SUCCEEDED(body->createTextRange(&range)) || !range) { return FALSE; }
+
+	return TRUE;
+}
+
+BOOL CCustomDHtmlDialog::GetSelectedTxtRange(CComPtr<IHTMLTxtRange>& range)
+{
+	CComPtr<IHTMLDocument2> doc2;
+	if (!SUCCEEDED(GetDHtmlDocument(&doc2)) || !doc2) { return FALSE; }
+
+	CComPtr<IHTMLSelectionObject> select;
+	if (!SUCCEEDED(doc2->get_selection(&select)) || !select) { return FALSE; }
+
+	CComPtr<IDispatch> disp;
+	if (!SUCCEEDED(select->createRange(&disp)) || !disp) { return FALSE; }
+
+	if (!SUCCEEDED(disp->QueryInterface(&range)) || !range) { return FALSE; }
+
+	return TRUE;
+}
+
+int CCustomDHtmlDialog::HighLight(int partial,
+	CComPtr<IMarkupPointer>& begin, CComPtr<IMarkupPointer>& end,
+	const std::wstring& search, bool enable, const std::wstring& attr)
+{
+	if (search.empty()) { return 0; }
+
+	CComPtr<IHTMLDocument2> doc2;
+	if (!SUCCEEDED(GetDHtmlDocument(&doc2)) || !doc2) { return 0; }
+
+	CComBSTR attrStr(attr.c_str());
+	CComBSTR searchStr(search.c_str());
+
+	CComQIPtr<IMarkupServices> ms(doc2);
+	CComQIPtr<IMarkupContainer> mc(doc2);
+	int count = 0;
+	if(ms && mc)
+	{
+		if (!begin && !end)
+		{
+			if (!SUCCEEDED(ms->CreateMarkupPointer(&begin)) || !begin) { return 0; }
+			if (!SUCCEEDED(ms->CreateMarkupPointer(&end)) || !end) { return 0; }
+
+			if (!SUCCEEDED(begin->SetGravity(POINTER_GRAVITY_Right))) { return 0; }
+			if (!SUCCEEDED(end->SetGravity(POINTER_GRAVITY_Left))) { return 0; }
+
+			if (!SUCCEEDED(begin->MoveToContainer(mc, TRUE))) { return 0; }
+			if (!SUCCEEDED(end->MoveToContainer(mc, FALSE))) { return 0; }
+		}
+
+		while(true)
+		{
+			HRESULT hr = begin->FindText(searchStr, 0, end, NULL);
+			if (!SUCCEEDED(hr) || hr == S_FALSE) { break; }
+
+			CComPtr<IHTMLElement> font;
+			if (enable)
+			{
+				if (!SUCCEEDED(ms->CreateElement(TAGID_FONT, attrStr, &font))) { break; }
+				if (!SUCCEEDED(ms->InsertElement(font, begin, end))) { break; }
+				if (!SUCCEEDED(begin->MoveToPointer(end))) { break; }
+			}
+			else
+			{      
+				if (!SUCCEEDED(begin->CurrentScope(&font))) { break; }
+				if (!SUCCEEDED(ms->RemoveElement(font))) { break; }
+				if (!SUCCEEDED(begin->MoveToPointer(end))) { break; }
+			}
+			++count;
+			if (partial > 0 && count >= partial) { break; }
+		}
+	}
+	return count;
+}
+
+BOOL CCustomDHtmlDialog::CreateBookmarks(const std::wstring& search, std::vector<std::wstring>& bookmarks)
+{
+	CComPtr<IHTMLTxtRange> range;
+	if (!CreateTxtRange(range)) { return FALSE; }
+
+	bookmarks.clear();
+
+	CComBSTR character(L"character");
+	CComBSTR textedit(L"textedit");
+	while (true)
+	{
+		VARIANT_BOOL success = VARIANT_FALSE;
+		if (!SUCCEEDED(range->findText(CComBSTR(search.c_str()), 0, 0, &success))) { break; }
+		if (success == VARIANT_FALSE) { break; }
+
+		CComBSTR bookmark;
+		if (!SUCCEEDED(range->getBookmark(&bookmark))) { break; }
+
+		bookmarks.push_back(CString(bookmark).GetString());
+
+		long actual;
+		if (!SUCCEEDED(range->moveStart(character, 1, &actual))) { break; }
+		if (!SUCCEEDED(range->moveEnd(textedit, 1, &actual))) { break; }
+	}
+	return !bookmarks.empty();
+}
+
+BOOL CCustomDHtmlDialog::CreateBookmarkMap(const std::wstring& search, BookmarkMap& map)
+{
+	CComPtr<IHTMLTxtRange> range;
+	if (!CreateTxtRange(range)) { return FALSE; }
+
+	map.clear();
+
+	CComBSTR character(L"character");
+	CComBSTR textedit(L"textedit");
+	CComBSTR StartToEnd(L"StartToEnd");
+	int pos = 0;
+	while (true)
+	{
+		VARIANT_BOOL success = VARIANT_FALSE;
+		if (!SUCCEEDED(range->findText(CComBSTR(search.c_str()), 0, 0, &success))) { break; }
+		if (success == VARIANT_FALSE) { break; }
+
+		CComBSTR bookmark;
+		if (!SUCCEEDED(range->getBookmark(&bookmark))) { break; }
+
+		++pos;
+		map.insert(std::make_pair(CString(bookmark).GetString(), pos));
+
+		long actual;
+		if (!SUCCEEDED(range->setEndPoint(StartToEnd, range)) ||
+			!SUCCEEDED(range->moveEnd(textedit, 1, &actual)))
+		{
+			break;
+		}
+
+		//if (!SUCCEEDED(range->moveStart(character, 1, &actual))) { break; }
+		//if (!SUCCEEDED(range->moveEnd(textedit, 1, &actual))) { break; }
+	}
+	return !map.empty();
+}
+
+
+BOOL CCustomDHtmlDialog::SearchParent(const std::wstring& search, const boost::function<void(const CComPtr<IHTMLElement>&)>& callback)
+{
+	CComPtr<IHTMLTxtRange> range;
+	if (!CreateTxtRange(range)) { return FALSE; }
+
+	BOOL result = FALSE;
+	CComBSTR character(L"character");
+	CComBSTR textedit(L"textedit");
+	while (true)
+	{
+		VARIANT_BOOL success = VARIANT_FALSE;
+		if (!SUCCEEDED(range->findText(CComBSTR(search.c_str()), 0, 0, &success))) { break; }
+		if (success == VARIANT_FALSE) { break; }
+
+		CComPtr<IHTMLElement> parent;
+		if (SUCCEEDED(range->parentElement(&parent)) && parent)
+		{
+			callback(parent);
+			result = TRUE;
+		}
+
+		long actual;
+		if (!SUCCEEDED(range->moveStart(character, 1, &actual))) { break; }
+		if (!SUCCEEDED(range->moveEnd(textedit, 1, &actual))) { break; }
+	}
+	return result;
+}
+
+
+BOOL CCustomDHtmlDialog::GetParentID(const CComPtr<IHTMLElement>& element, const std::wstring& header, std::wstring& id)
+{
+	CComBSTR str;
+	if (SUCCEEDED(element->get_id(&str)))
+	{
+		std::wstring dst = CString(str).GetString();
+		if (dst.find(header) == 0)
+		{
+			id = dst;
+			return TRUE;
+		}
+	}
+
+	CComPtr<IHTMLElement> parent;
+	if (SUCCEEDED(element->get_parentElement(&parent)) && parent)
+	{
+		return GetParentID(parent, header, id);
+	}
+	return FALSE;
+}
+
+BOOL CCustomDHtmlDialog::SelectAll()
+{
+	if (m_pBrowserApp)
+	{
+		HRESULT hr = m_pBrowserApp->ExecWB(OLECMDID_SELECTALL, OLECMDEXECOPT_PROMPTUSER, NULL, NULL);
+		return SUCCEEDED(hr) ? TRUE : FALSE;
+	}
+	return TRUE;
+}
+
+BOOL CCustomDHtmlDialog::CopyText(const std::wstring& text)
+{
+	if (OpenClipboard())
+	{
+		EmptyClipboard();
+		size_t size = text.size() + 1;
+		HGLOBAL hg = GlobalAlloc(GHND | GMEM_SHARE, sizeof(WCHAR) * size);
+		LPWSTR mem = (LPWSTR)GlobalLock(hg);
+
+		wcsncpy_s(mem, size, text.c_str(), _TRUNCATE);
+		GlobalUnlock(hg);
+
+		SetClipboardData(CF_UNICODETEXT, hg);
+
+		CloseClipboard();
+		return TRUE;
+	}
+	return FALSE;
+}
+
+BOOL CCustomDHtmlDialog::CopySelectedText()
+{
+	if (m_pBrowserApp)
+	{
+		HRESULT hr = m_pBrowserApp->ExecWB(OLECMDID_COPY, OLECMDEXECOPT_PROMPTUSER, NULL, NULL);
+		return SUCCEEDED(hr) ? TRUE : FALSE;
+	}
+	return TRUE;
+	//CComPtr<IHTMLTxtRange> range;
+	//if (GetSelectedTxtRange(range)) { return FALSE; }
+	//if (!range) { return FALSE; }
+
+	//CComBSTR text;
+	//if (!SUCCEEDED(range->get_text(&text))) { return FALSE; }
+	//return CopyText(CString(text).GetString());
+}
+
+BOOL CCustomDHtmlDialog::CopyAnchorHref(const CComQIPtr<IHTMLAnchorElement>& anchor)
+{
+	if (!anchor) { return FALSE;  }
+	CComBSTR str;
+	if (!SUCCEEDED(anchor->get_href(&str))) { return FALSE; }
+	return CopyText(CString(str).GetString());
+}
+
+BOOL CCustomDHtmlDialog::GetAnchorHref(const CComQIPtr<IHTMLAnchorElement>& anchor, std::wstring& href)
+{
+	if (!anchor) { return FALSE;  }
+	CComBSTR str;
+	if (!SUCCEEDED(anchor->get_href(&str))) { return FALSE; }
+	href = CString(str).GetString();
+	return TRUE;
+}
+
+BOOL CCustomDHtmlDialog::OpenWebSearch()
+{
+	CComQIPtr<IHTMLTxtRange> range;
+	if (!GetSelectedTxtRange(range)) { return FALSE; }
+
+	CComBSTR str;
+	if (!SUCCEEDED(range->get_text(&str))) { return FALSE; }
+
+	std::wstring url = L"http://www.google.co.jp/search?q=" + utl::toUTF16(utl::urlencode(utl::toUTF8(CString(str).GetString())));
+	utl::selectExecute(gl_.value.detail.browser.def, gl_.value.detail.browser.web, url);
+	return TRUE;
+}
+
+BOOL CCustomDHtmlDialog::IsEnableCommand(ULONG id)
+{
+	if (!m_pBrowserApp) { return TRUE; }
+
+	CComQIPtr<IOleCommandTarget> target(m_pBrowserApp);
+	if (!target) { return TRUE; }
+
+	OLECMD cmd[] = { { id, 0 } };
+	if (!SUCCEEDED(target->QueryStatus(NULL, sizeof(cmd) / sizeof(OLECMD), cmd, NULL))) { return FALSE; }
+
+	return cmd[0].cmdf & OLECMDF_ENABLED ? TRUE : FALSE;
+}
+
+BOOL CCustomDHtmlDialog::IsTextArea(const CPoint& screen)
+{
+	CPoint pt(screen);
+	CWnd* wnd = WindowFromPoint(pt);
+	if (!wnd || wnd->GetSafeHwnd() != GetSafeBrowserHwnd()) { return FALSE; }
+
+	CComPtr<IHTMLDocument2> doc2;
+	if (!SUCCEEDED(GetDHtmlDocument(&doc2)) || !doc2) { return FALSE; }
+
+	wnd->ScreenToClient(&pt);
+	CComPtr<IHTMLElement> element;
+	if (!SUCCEEDED(doc2->elementFromPoint(pt.x, pt.y, &element)) || !element) { return FALSE; }
+
+	CComBSTR tag;
+	if (!SUCCEEDED(element->get_tagName(&tag))) { return FALSE; }
+
+	if (CString(tag).IsEmpty()) { return FALSE; }
+
+	return TRUE;
+}
+
+BOOL CCustomDHtmlDialog::GetSource(std::wstring& source)
+{
+	if (!m_pBrowserApp) { return FALSE; }
+
+	CComPtr<IDispatch> disp; 
+	if (!SUCCEEDED(m_pBrowserApp->get_Document(&disp)) || !disp) { return FALSE; }
+
+	HGLOBAL global = NULL;
+	global = GlobalAlloc(GMEM_MOVEABLE, 0);
+	if (!global) { return FALSE; }
+
+	CComQIPtr<IPersistStreamInit> persist(disp);
+	if (persist)
+	{
+		CComPtr<IStream> stream;
+		if (SUCCEEDED(CreateStreamOnHGlobal(global, TRUE, &stream)) && stream)
+		{
+			if (SUCCEEDED(persist->Save(stream, FALSE)))
+			{
+				STATSTG stat = {0};
+				if (SUCCEEDED(stream->Stat(&stat, STATFLAG_NONAME)))
+				{
+					char* p = static_cast<char*>(GlobalLock(global));
+					if (p)
+					{
+						std::vector<char> vec(p, p + stat.cbSize.LowPart);
+						vec.push_back(L'\0');
+						vec.push_back(L'\0');
+						vec.push_back(L'\0');
+						vec.push_back(L'\0');
+						source = (LPCWSTR)vec.data();
+						GlobalUnlock(global);
+						return TRUE;
+					}
+				}
+			}
+		}
+	}
+	GlobalFree(global);
+	return FALSE;
+}
+
+void CCustomDHtmlDialog::ChangeFocus()
+{
+	CWnd* wnd = GetFocus();
+	if (wnd)
+	{// エディットカーソル再描画
+		CIMEEdit::through() = true; // IME機能停止
+		wnd->SendMessage(WM_KILLFOCUS, NULL, 0);
+		wnd->SendMessage(WM_SETFOCUS, NULL, 0);
+		CIMEEdit::through() = false; // IME機能再開
+	}
+}
+
+void CCustomDHtmlDialog::DoDataExchange(CDataExchange* pDX)
+{
+	CDHtmlDialog::DoDataExchange(pDX);
+}
+
+BOOL CCustomDHtmlDialog::OnInitDialog()
+{
+	m_nHtmlResID = 0;
+	m_szHtmlResID = NULL;
+	m_strCurrentUrl = L"about:blank";
+	CDHtmlDialog::OnInitDialog();
+
+	if (m_pBrowserApp)
+	{
+		// ドラッグアンドドロップ抑止
+		m_pBrowserApp->put_RegisterAsBrowser(VARIANT_FALSE);
+		m_pBrowserApp->put_RegisterAsDropTarget(VARIANT_FALSE);
+		// エラーダイアログ抑止
+		m_pBrowserApp->put_Silent(VARIANT_TRUE);
+	}
+
+	// 元の設定
+	// SetHostFlags(DOCHOSTUIFLAG_NO3DBORDER | DOCHOSTUIFLAG_SCROLL_NO);
+	// 初期設定でスクロールバーが非表示になっているので表示するように設定する
+	// IE=7の時に3Dボーダーが表示されないようにする
+	SetHostFlags(DOCHOSTUIFLAG_NO3DBORDER | DOCHOSTUIFLAG_THEME);
+
+	return TRUE;  // フォーカスをコントロールに設定した場合を除き、TRUE を返します。
+}
+
+BOOL CCustomDHtmlDialog::PreTranslateMessage(MSG* pMsg)
+{
+	if (pMsg->message == WM_KEYDOWN)
+	{
+		if (pMsg->wParam == VK_RETURN || pMsg->wParam == VK_ESCAPE)
+		{
+			return FALSE;
+		}
+	}
+	return CDHtmlDialog::PreTranslateMessage(pMsg);
+}
+
+
+HRESULT CCustomDHtmlDialog::GetOptionKeyPath(LPOLESTR *pchKey, DWORD dw)
+{// http://msdn.microsoft.com/ja-jp/library/aa753258.aspx
+	HRESULT hr;
+	WCHAR* szKey = L"Software";
+
+	//  cbLength is the length of szKey in bytes.
+	size_t cbLength;
+	hr = StringCbLengthW(szKey, 1280, &cbLength);
+	//  TODO: Add error handling code here.
+
+	if (pchKey)
+	{
+		*pchKey = (LPOLESTR)CoTaskMemAlloc(cbLength + sizeof(WCHAR));
+		if (*pchKey)
+			hr = StringCbCopyW(*pchKey, cbLength + sizeof(WCHAR), szKey);
+	}
+	else
+		hr = E_INVALIDARG;
+
+	return hr;
+}
+
+
+BEGIN_MESSAGE_MAP(CCustomDHtmlDialog, CDHtmlDialog)
+END_MESSAGE_MAP()
+
+BEGIN_DHTML_EVENT_MAP(CCustomDHtmlDialog)
+END_DHTML_EVENT_MAP()
+
+BEGIN_EVENTSINK_MAP(CCustomDHtmlDialog, CDHtmlDialog)
+	ON_EVENT(CCustomDHtmlDialog, AFX_IDC_BROWSER, DISPID_BEFORENAVIGATE2, OnBeforeNavigate2, VTS_DISPATCH VTS_VARIANT VTS_VARIANT VTS_VARIANT VTS_VARIANT VTS_VARIANT VTS_PBOOL)
+END_EVENTSINK_MAP()
+
+
+// CCustomDHtmlDialog メッセージ ハンドラー
+void CCustomDHtmlDialog::OnBeforeNavigate2(LPDISPATCH pDisp, VARIANT* URL,VARIANT* Flags, VARIANT* TargetFrameName, VARIANT* PostData,VARIANT* Headers, BOOL* Cancel)
+{
+	if (custom_.navigate && Cancel) { *Cancel = VARIANT_TRUE; return; }
+	if (URL == NULL && Cancel) { *Cancel = VARIANT_TRUE; return; }
+	custom_.navigate = true;
+}

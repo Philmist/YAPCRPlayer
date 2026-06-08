@@ -1,0 +1,1208 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="ヘッダー ファイル">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="リソース ファイル">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="DirectShow">
+      <UniqueIdentifier>{53b9750c-b44b-40f8-816c-fafce48cb39c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Util">
+      <UniqueIdentifier>{052abefc-9a8c-464c-bdd7-3bc559fb10b3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Dialog">
+      <UniqueIdentifier>{faf2501d-1785-47a6-a57e-9350f64f2739}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="DirectShow\EVRCustom">
+      <UniqueIdentifier>{ee91516a-526a-4db3-b382-c93f2f2f389b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="DirectShow\EVRCustom\common">
+      <UniqueIdentifier>{de40aaa6-8e41-456f-94e0-83cd463900f3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Dialog\Operation">
+      <UniqueIdentifier>{8534d3fc-3fe7-457e-a9ea-72886dc2d49d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Dialog\Video">
+      <UniqueIdentifier>{52ee711b-c38e-4141-a168-0feb2cdc6a10}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Dialog\Detail">
+      <UniqueIdentifier>{76bd5c7c-11d7-4b40-b6ec-d0e700d13939}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Dialog\Display">
+      <UniqueIdentifier>{39ea478f-bd37-4c24-9bf2-0c0a10481fac}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Serialize">
+      <UniqueIdentifier>{1ee78e35-5395-4656-b39b-08b8202c7465}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソース ファイル">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="BBS">
+      <UniqueIdentifier>{4d0b5f94-6340-404f-b41e-120cdcb6da93}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="PeerCast">
+      <UniqueIdentifier>{de3a2274-eda6-4f9d-aaf5-55c68852db14}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Dialog\Main">
+      <UniqueIdentifier>{7cd6c933-4039-4c14-9b32-4df32f814a1b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="DirectShow\Splitter">
+      <UniqueIdentifier>{d5a45f3c-af38-455b-a27d-6f13c557bdd7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Control">
+      <UniqueIdentifier>{abf2245e-6d7b-40e4-8ae7-1c42a4027888}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Dialog\DetailBBS">
+      <UniqueIdentifier>{e2eb5e06-8f6c-402d-96c2-36453996d733}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Main">
+      <UniqueIdentifier>{12e11ef4-8657-4c86-8fa4-a64b887a038b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Dialog\Browser">
+      <UniqueIdentifier>{635b9db6-65e8-414f-863e-277aa7f062ba}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ReadMe.txt" />
+    <None Include="res\PCRPlayer.rc2">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="res\PCRPlayer.ico">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="res\bitmap1.bmp">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="res\bitmap2.bmp">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="res\box.bmp">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="res\blank.bmp">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="res\write.bmp">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="res\write.ico">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="res\write.png">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="res\icon1.ico">
+      <Filter>リソース ファイル</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="stdafx.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="Resource.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="Debug.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="XmlParser.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="DSPlayer.h">
+      <Filter>DirectShow</Filter>
+    </ClInclude>
+    <ClInclude Include="FileSource.h">
+      <Filter>DirectShow</Filter>
+    </ClInclude>
+    <ClInclude Include="VideoRenderer.h">
+      <Filter>DirectShow</Filter>
+    </ClInclude>
+    <ClInclude Include="AudioRenderer.h">
+      <Filter>DirectShow</Filter>
+    </ClInclude>
+    <ClInclude Include="Util.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="PCRPlayer.h">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="GraphManager.h">
+      <Filter>DirectShow</Filter>
+    </ClInclude>
+    <ClInclude Include="EVRCustom\EVRPresenter.h">
+      <Filter>DirectShow\EVRCustom</Filter>
+    </ClInclude>
+    <ClInclude Include="EVRCustom\Helpers.h">
+      <Filter>DirectShow\EVRCustom</Filter>
+    </ClInclude>
+    <ClInclude Include="EVRCustom\PresentEngine.h">
+      <Filter>DirectShow\EVRCustom</Filter>
+    </ClInclude>
+    <ClInclude Include="EVRCustom\Presenter.h">
+      <Filter>DirectShow\EVRCustom</Filter>
+    </ClInclude>
+    <ClInclude Include="EVRCustom\scheduler.h">
+      <Filter>DirectShow\EVRCustom</Filter>
+    </ClInclude>
+    <ClInclude Include="EVRCustom\common\AsyncCB.h">
+      <Filter>DirectShow\EVRCustom\common</Filter>
+    </ClInclude>
+    <ClInclude Include="EVRCustom\common\BufferLock.h">
+      <Filter>DirectShow\EVRCustom\common</Filter>
+    </ClInclude>
+    <ClInclude Include="EVRCustom\common\ClassFactory.h">
+      <Filter>DirectShow\EVRCustom\common</Filter>
+    </ClInclude>
+    <ClInclude Include="EVRCustom\common\common.h">
+      <Filter>DirectShow\EVRCustom\common</Filter>
+    </ClInclude>
+    <ClInclude Include="EVRCustom\common\critsec.h">
+      <Filter>DirectShow\EVRCustom\common</Filter>
+    </ClInclude>
+    <ClInclude Include="EVRCustom\common\GrowArray.h">
+      <Filter>DirectShow\EVRCustom\common</Filter>
+    </ClInclude>
+    <ClInclude Include="EVRCustom\common\linklist.h">
+      <Filter>DirectShow\EVRCustom\common</Filter>
+    </ClInclude>
+    <ClInclude Include="EVRCustom\common\logging.h">
+      <Filter>DirectShow\EVRCustom\common</Filter>
+    </ClInclude>
+    <ClInclude Include="EVRCustom\common\logmediatype.h">
+      <Filter>DirectShow\EVRCustom\common</Filter>
+    </ClInclude>
+    <ClInclude Include="EVRCustom\common\mediatype.h">
+      <Filter>DirectShow\EVRCustom\common</Filter>
+    </ClInclude>
+    <ClInclude Include="EVRCustom\common\mfutils.h">
+      <Filter>DirectShow\EVRCustom\common</Filter>
+    </ClInclude>
+    <ClInclude Include="EVRCustom\common\PropVar.h">
+      <Filter>DirectShow\EVRCustom\common</Filter>
+    </ClInclude>
+    <ClInclude Include="EVRCustom\common\registry.h">
+      <Filter>DirectShow\EVRCustom\common</Filter>
+    </ClInclude>
+    <ClInclude Include="EVRCustom\common\TinyMap.h">
+      <Filter>DirectShow\EVRCustom\common</Filter>
+    </ClInclude>
+    <ClInclude Include="EVRCustom\common\trace.h">
+      <Filter>DirectShow\EVRCustom\common</Filter>
+    </ClInclude>
+    <ClInclude Include="HintDlg.h">
+      <Filter>Dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="MemSourceFilter.h">
+      <Filter>DirectShow</Filter>
+    </ClInclude>
+    <ClInclude Include="Network.h">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="AsyncBufferingLoader.h">
+      <Filter>DirectShow</Filter>
+    </ClInclude>
+    <ClInclude Include="EVRCustom\D3DUtl.h">
+      <Filter>DirectShow\EVRCustom</Filter>
+    </ClInclude>
+    <ClInclude Include="EVRCustom\CoordGeom.h">
+      <Filter>DirectShow\EVRCustom</Filter>
+    </ClInclude>
+    <ClInclude Include="EVRCustom\DX9Shaders.h">
+      <Filter>DirectShow\EVRCustom</Filter>
+    </ClInclude>
+    <ClInclude Include="StatusDlg.h">
+      <Filter>Dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="SubpaneDlg.h">
+      <Filter>Dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="SeekDlg.h">
+      <Filter>Dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="OperationMouseDlg.h">
+      <Filter>Dialog\Operation</Filter>
+    </ClInclude>
+    <ClInclude Include="DetailSnapshotDlg.h">
+      <Filter>Dialog\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="DetailDecoderDlg.h">
+      <Filter>Dialog\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="BoxDlg.h">
+      <Filter>Dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="DisplayWindowDlg.h">
+      <Filter>Dialog\Display</Filter>
+    </ClInclude>
+    <ClInclude Include="DisplayStatusDlg.h">
+      <Filter>Dialog\Display</Filter>
+    </ClInclude>
+    <ClInclude Include="DisplaySeekDlg.h">
+      <Filter>Dialog\Display</Filter>
+    </ClInclude>
+    <ClInclude Include="DisplayAspectDlg.h">
+      <Filter>Dialog\Display</Filter>
+    </ClInclude>
+    <ClInclude Include="DisplayDatetimeDlg.h">
+      <Filter>Dialog\Display</Filter>
+    </ClInclude>
+    <ClInclude Include="StatusSampleView.h">
+      <Filter>Control</Filter>
+    </ClInclude>
+    <ClInclude Include="SeekSampleView.h">
+      <Filter>Control</Filter>
+    </ClInclude>
+    <ClInclude Include="SampleView.h">
+      <Filter>Control</Filter>
+    </ClInclude>
+    <ClInclude Include="FontButton.h">
+      <Filter>Control</Filter>
+    </ClInclude>
+    <ClInclude Include="ColorButton.h">
+      <Filter>Control</Filter>
+    </ClInclude>
+    <ClInclude Include="TemplateComboBox.h">
+      <Filter>Control</Filter>
+    </ClInclude>
+    <ClInclude Include="Serialize.h">
+      <Filter>Serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="SerializeDisplay.h">
+      <Filter>Serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="SerializeOperation.h">
+      <Filter>Serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="SerializeVideo.h">
+      <Filter>Serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="SerializeDetail.h">
+      <Filter>Serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="DetailStartDlg.h">
+      <Filter>Dialog\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="DetailEndDlg.h">
+      <Filter>Dialog\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="Hook.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="DetailNetworkDlg.h">
+      <Filter>Dialog\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="DetailBrowserDlg.h">
+      <Filter>Dialog\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="OpenFileDlg.h">
+      <Filter>Dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="LogDlg.h">
+      <Filter>Dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="Global.h">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="Gesture.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="Shortcut.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="OperationShortcutDlg.h">
+      <Filter>Dialog\Operation</Filter>
+    </ClInclude>
+    <ClInclude Include="DetailTypeDlg.h">
+      <Filter>Dialog\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="ShortcutEdit.h">
+      <Filter>Control</Filter>
+    </ClInclude>
+    <ClInclude Include="CustomReferenceClock.h">
+      <Filter>DirectShow</Filter>
+    </ClInclude>
+    <ClInclude Include="BBSDlg.h">
+      <Filter>Dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="ResSampleView.h">
+      <Filter>Control</Filter>
+    </ClInclude>
+    <ClInclude Include="ResDlg.h">
+      <Filter>Dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="BaseBBS.h">
+      <Filter>BBS</Filter>
+    </ClInclude>
+    <ClInclude Include="BBSManager.h">
+      <Filter>BBS</Filter>
+    </ClInclude>
+    <ClInclude Include="BBSOperator.h">
+      <Filter>BBS</Filter>
+    </ClInclude>
+    <ClInclude Include="Mlang.h">
+      <Filter>BBS</Filter>
+    </ClInclude>
+    <ClInclude Include="ThreadDlg.h">
+      <Filter>Dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="CheckBoxStatusBar.h">
+      <Filter>Control</Filter>
+    </ClInclude>
+    <ClInclude Include="ChannelDlg.h">
+      <Filter>Dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="HintSampleView.h">
+      <Filter>Control</Filter>
+    </ClInclude>
+    <ClInclude Include="DisplayChannelDlg.h">
+      <Filter>Dialog\Display</Filter>
+    </ClInclude>
+    <ClInclude Include="ChannelSampleView.h">
+      <Filter>Control</Filter>
+    </ClInclude>
+    <ClInclude Include="PeerCastManager.h">
+      <Filter>PeerCast</Filter>
+    </ClInclude>
+    <ClInclude Include="PeerCast.h">
+      <Filter>PeerCast</Filter>
+    </ClInclude>
+    <ClInclude Include="OptionDlg.h">
+      <Filter>Dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="VideoAdjustDlg.h">
+      <Filter>Dialog\Video</Filter>
+    </ClInclude>
+    <ClInclude Include="MainDlg.h">
+      <Filter>Dialog\Main</Filter>
+    </ClInclude>
+    <ClInclude Include="HTMLEscape.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="VersionDlg.h">
+      <Filter>Dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="SyncLog.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="SyncValue.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="SyncThread.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="DisplayResDlg.h">
+      <Filter>Dialog\Display</Filter>
+    </ClInclude>
+    <ClInclude Include="CustomEdit.h">
+      <Filter>Control</Filter>
+    </ClInclude>
+    <ClInclude Include="DisplayBBSDlg.h">
+      <Filter>Dialog\Display</Filter>
+    </ClInclude>
+    <ClInclude Include="BBSSampleView.h">
+      <Filter>Control</Filter>
+    </ClInclude>
+    <ClInclude Include="WindowSnap.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="DisplayHintDlg.h">
+      <Filter>Dialog\Display</Filter>
+    </ClInclude>
+    <ClInclude Include="DisplayResBoxDlg.h">
+      <Filter>Dialog\Display</Filter>
+    </ClInclude>
+    <ClInclude Include="DisplayResBackDlg.h">
+      <Filter>Dialog\Display</Filter>
+    </ClInclude>
+    <ClInclude Include="DisplayResColor1Dlg.h">
+      <Filter>Dialog\Display</Filter>
+    </ClInclude>
+    <ClInclude Include="DisplayResColor2Dlg.h">
+      <Filter>Dialog\Display</Filter>
+    </ClInclude>
+    <ClInclude Include="Layout.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="FavoriteDlg.h">
+      <Filter>Dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="Snapshot.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="Splitter\AsyncReader.h">
+      <Filter>DirectShow\Splitter</Filter>
+    </ClInclude>
+    <ClInclude Include="Splitter\BaseSplitter.h">
+      <Filter>DirectShow\Splitter</Filter>
+    </ClInclude>
+    <ClInclude Include="Splitter\BaseSplitterFile.h">
+      <Filter>DirectShow\Splitter</Filter>
+    </ClInclude>
+    <ClInclude Include="Splitter\BaseSplitterFileEx.h">
+      <Filter>DirectShow\Splitter</Filter>
+    </ClInclude>
+    <ClInclude Include="Splitter\DSUtil.h">
+      <Filter>DirectShow\Splitter</Filter>
+    </ClInclude>
+    <ClInclude Include="Splitter\FLVMetaData.h">
+      <Filter>DirectShow\Splitter</Filter>
+    </ClInclude>
+    <ClInclude Include="Splitter\FLVSplitter.h">
+      <Filter>DirectShow\Splitter</Filter>
+    </ClInclude>
+    <ClInclude Include="Splitter\GolombBuffer.h">
+      <Filter>DirectShow\Splitter</Filter>
+    </ClInclude>
+    <ClInclude Include="Splitter\IBitRateInfo.h">
+      <Filter>DirectShow\Splitter</Filter>
+    </ClInclude>
+    <ClInclude Include="Splitter\IBufferInfo.h">
+      <Filter>DirectShow\Splitter</Filter>
+    </ClInclude>
+    <ClInclude Include="Splitter\IKeyFrameInfo.h">
+      <Filter>DirectShow\Splitter</Filter>
+    </ClInclude>
+    <ClInclude Include="Splitter\moreuuids.h">
+      <Filter>DirectShow\Splitter</Filter>
+    </ClInclude>
+    <ClInclude Include="Splitter\MultiFiles.h">
+      <Filter>DirectShow\Splitter</Filter>
+    </ClInclude>
+    <ClInclude Include="Logger.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="OperationVariationDlg.h">
+      <Filter>Dialog\Operation</Filter>
+    </ClInclude>
+    <ClInclude Include="LayeredWindow.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="BaseBuilder.h">
+      <Filter>DirectShow</Filter>
+    </ClInclude>
+    <ClInclude Include="OnlineBuilder.h">
+      <Filter>DirectShow</Filter>
+    </ClInclude>
+    <ClInclude Include="OfflineBuilder.h">
+      <Filter>DirectShow</Filter>
+    </ClInclude>
+    <ClInclude Include="PeerCastBuilder.h">
+      <Filter>DirectShow</Filter>
+    </ClInclude>
+    <ClInclude Include="TemplateListCtrl.h">
+      <Filter>Control</Filter>
+    </ClInclude>
+    <ClInclude Include="TemplateList.h">
+      <Filter>Control</Filter>
+    </ClInclude>
+    <ClInclude Include="CustomListCtrl.h">
+      <Filter>Control</Filter>
+    </ClInclude>
+    <ClInclude Include="ReplaceDlg.h">
+      <Filter>Dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="DisplayInformationDlg.h">
+      <Filter>Dialog\Display</Filter>
+    </ClInclude>
+    <ClInclude Include="ReplaceElement.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="StatusLayout.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="DisplayInformationGeneralDlg.h">
+      <Filter>Dialog\Display</Filter>
+    </ClInclude>
+    <ClInclude Include="OperationWindowDlg.h">
+      <Filter>Dialog\Operation</Filter>
+    </ClInclude>
+    <ClInclude Include="DisplayResColor3Dlg.h">
+      <Filter>Dialog\Display</Filter>
+    </ClInclude>
+    <ClInclude Include="DetailNetworkGeneralDlg.h">
+      <Filter>Dialog\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="DetailTypeWMVDlg.h">
+      <Filter>Dialog\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="IMEEdit.h">
+      <Filter>Control</Filter>
+    </ClInclude>
+    <ClInclude Include="DisplayResIDDlg.h">
+      <Filter>Dialog\Display</Filter>
+    </ClInclude>
+    <ClInclude Include="DisplayResFormat1Dlg.h">
+      <Filter>Dialog\Display</Filter>
+    </ClInclude>
+    <ClInclude Include="DisplayResFormat2Dlg.h">
+      <Filter>Dialog\Display</Filter>
+    </ClInclude>
+    <ClInclude Include="LayoutCtrl.h">
+      <Filter>Control</Filter>
+    </ClInclude>
+    <ClInclude Include="FrameDlg.h">
+      <Filter>Dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="TestDlg.h">
+      <Filter>Dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="BBSRegex.h">
+      <Filter>BBS</Filter>
+    </ClInclude>
+    <ClInclude Include="BBSSkin.h">
+      <Filter>BBS</Filter>
+    </ClInclude>
+    <ClInclude Include="BBSCallback.h">
+      <Filter>BBS</Filter>
+    </ClInclude>
+    <ClInclude Include="CustomDHtmlDialog.h">
+      <Filter>Dialog\Browser</Filter>
+    </ClInclude>
+    <ClInclude Include="CustomEventHandler.h">
+      <Filter>Dialog\Browser</Filter>
+    </ClInclude>
+    <ClInclude Include="DHtmlUtl.h">
+      <Filter>Dialog\Browser</Filter>
+    </ClInclude>
+    <ClInclude Include="BrowserHook.h">
+      <Filter>Dialog\Browser</Filter>
+    </ClInclude>
+    <ClInclude Include="BrowserDlg.h">
+      <Filter>Dialog\Browser</Filter>
+    </ClInclude>
+    <ClInclude Include="PopupBrowserDlg.h">
+      <Filter>Dialog\Browser</Filter>
+    </ClInclude>
+    <ClInclude Include="ExtractBrowserDlg.h">
+      <Filter>Dialog\Browser</Filter>
+    </ClInclude>
+    <ClInclude Include="ExtractDlg.h">
+      <Filter>Dialog\Browser</Filter>
+    </ClInclude>
+    <ClInclude Include="BrowserMenu.h">
+      <Filter>Dialog\Browser</Filter>
+    </ClInclude>
+    <ClInclude Include="SearchDlg.h">
+      <Filter>Dialog\Browser</Filter>
+    </ClInclude>
+    <ClInclude Include="DetailBBSCommonDlg.h">
+      <Filter>Dialog\DetailBBS</Filter>
+    </ClInclude>
+    <ClInclude Include="MFCPropertyGridCheckProperty.h">
+      <Filter>Control</Filter>
+    </ClInclude>
+    <ClInclude Include="MFCPropertyGridColorPropertyEx.h">
+      <Filter>Control</Filter>
+    </ClInclude>
+    <ClInclude Include="MFCPropertyGridComboProperty.h">
+      <Filter>Control</Filter>
+    </ClInclude>
+    <ClInclude Include="MFCPropertyGridNameCheckProperty.h">
+      <Filter>Control</Filter>
+    </ClInclude>
+    <ClInclude Include="MFCPropertyGridNumberProperty.h">
+      <Filter>Control</Filter>
+    </ClInclude>
+    <ClInclude Include="MFCPropertyGridOperator.h">
+      <Filter>Control</Filter>
+    </ClInclude>
+    <ClInclude Include="BasePropDlg.h">
+      <Filter>Dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="DetailBBSCommonNetworkDlg.h">
+      <Filter>Dialog\DetailBBS</Filter>
+    </ClInclude>
+    <ClInclude Include="DetailBBSCommonGeneralDlg.h">
+      <Filter>Dialog\DetailBBS</Filter>
+    </ClInclude>
+    <ClInclude Include="DetailBBSCommonThreadDlg.h">
+      <Filter>Dialog\DetailBBS</Filter>
+    </ClInclude>
+    <ClInclude Include="DetailBBSBarDlg.h">
+      <Filter>Dialog\DetailBBS</Filter>
+    </ClInclude>
+    <ClInclude Include="DetailBBSBarPopupDlg.h">
+      <Filter>Dialog\DetailBBS</Filter>
+    </ClInclude>
+    <ClInclude Include="DetailBBSBarThreadDlg.h">
+      <Filter>Dialog\DetailBBS</Filter>
+    </ClInclude>
+    <ClInclude Include="DetailBBSBarPostDlg.h">
+      <Filter>Dialog\DetailBBS</Filter>
+    </ClInclude>
+    <ClInclude Include="DetailBBSBrowserDlg.h">
+      <Filter>Dialog\DetailBBS</Filter>
+    </ClInclude>
+    <ClInclude Include="DetailBBSBrowserThreadDlg.h">
+      <Filter>Dialog\DetailBBS</Filter>
+    </ClInclude>
+    <ClInclude Include="DetailBBSBrowserPopupDlg.h">
+      <Filter>Dialog\DetailBBS</Filter>
+    </ClInclude>
+    <ClInclude Include="SkinConfigDlg.h">
+      <Filter>Dialog\DetailBBS</Filter>
+    </ClInclude>
+    <ClInclude Include="DetailBBSBrowserScrollDlg.h">
+      <Filter>Dialog\DetailBBS</Filter>
+    </ClInclude>
+    <ClInclude Include="DisplayResLatestDlg.h">
+      <Filter>Dialog\Display</Filter>
+    </ClInclude>
+    <ClInclude Include="ProcessManager.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="DetailBBSCommonFontDlg.h">
+      <Filter>Dialog\DetailBBS</Filter>
+    </ClInclude>
+    <ClInclude Include="DetailNetworkPeercastDlg.h">
+      <Filter>Dialog\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="DetailTypeFLVDlg.h">
+      <Filter>Dialog\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="MFCPropertyGridNameCheckNumberProperty.h">
+      <Filter>Control</Filter>
+    </ClInclude>
+    <ClInclude Include="MFCPropertyGridFolderProperty.h">
+      <Filter>Control</Filter>
+    </ClInclude>
+    <ClInclude Include="SimpleEdit.h">
+      <Filter>Control</Filter>
+    </ClInclude>
+    <ClInclude Include="MFCPropertyGridNameCheckColorPropertyEx.h">
+      <Filter>Control</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="DSPlayer.cpp">
+      <Filter>DirectShow</Filter>
+    </ClCompile>
+    <ClCompile Include="FileSource.cpp">
+      <Filter>DirectShow</Filter>
+    </ClCompile>
+    <ClCompile Include="VideoRenderer.cpp">
+      <Filter>DirectShow</Filter>
+    </ClCompile>
+    <ClCompile Include="AudioRenderer.cpp">
+      <Filter>DirectShow</Filter>
+    </ClCompile>
+    <ClCompile Include="Util.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="PCRPlayer.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="Global.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="GraphManager.cpp">
+      <Filter>DirectShow</Filter>
+    </ClCompile>
+    <ClCompile Include="EVRCustom\Helpers.cpp">
+      <Filter>DirectShow\EVRCustom</Filter>
+    </ClCompile>
+    <ClCompile Include="EVRCustom\PresentEngine.cpp">
+      <Filter>DirectShow\EVRCustom</Filter>
+    </ClCompile>
+    <ClCompile Include="EVRCustom\Presenter.cpp">
+      <Filter>DirectShow\EVRCustom</Filter>
+    </ClCompile>
+    <ClCompile Include="EVRCustom\scheduler.cpp">
+      <Filter>DirectShow\EVRCustom</Filter>
+    </ClCompile>
+    <ClCompile Include="HintDlg.cpp">
+      <Filter>Dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="MemSourceFilter.cpp">
+      <Filter>DirectShow</Filter>
+    </ClCompile>
+    <ClCompile Include="Network.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="AsyncBufferingLoader.cpp">
+      <Filter>DirectShow</Filter>
+    </ClCompile>
+    <ClCompile Include="EVRCustom\D3DUtl.cpp">
+      <Filter>DirectShow\EVRCustom</Filter>
+    </ClCompile>
+    <ClCompile Include="EVRCustom\CoordGeom.cpp">
+      <Filter>DirectShow\EVRCustom</Filter>
+    </ClCompile>
+    <ClCompile Include="EVRCustom\DX9Shaders.cpp">
+      <Filter>DirectShow\EVRCustom</Filter>
+    </ClCompile>
+    <ClCompile Include="StatusDlg.cpp">
+      <Filter>Dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="SubpaneDlg.cpp">
+      <Filter>Dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="SeekDlg.cpp">
+      <Filter>Dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="OperationMouseDlg.cpp">
+      <Filter>Dialog\Operation</Filter>
+    </ClCompile>
+    <ClCompile Include="DetailSnapshotDlg.cpp">
+      <Filter>Dialog\Detail</Filter>
+    </ClCompile>
+    <ClCompile Include="DetailDecoderDlg.cpp">
+      <Filter>Dialog\Detail</Filter>
+    </ClCompile>
+    <ClCompile Include="BoxDlg.cpp">
+      <Filter>Dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="DisplayWindowDlg.cpp">
+      <Filter>Dialog\Display</Filter>
+    </ClCompile>
+    <ClCompile Include="DisplayStatusDlg.cpp">
+      <Filter>Dialog\Display</Filter>
+    </ClCompile>
+    <ClCompile Include="DisplaySeekDlg.cpp">
+      <Filter>Dialog\Display</Filter>
+    </ClCompile>
+    <ClCompile Include="DisplayAspectDlg.cpp">
+      <Filter>Dialog\Display</Filter>
+    </ClCompile>
+    <ClCompile Include="DisplayDatetimeDlg.cpp">
+      <Filter>Dialog\Display</Filter>
+    </ClCompile>
+    <ClCompile Include="StatusSampleView.cpp">
+      <Filter>Control</Filter>
+    </ClCompile>
+    <ClCompile Include="SeekSampleView.cpp">
+      <Filter>Control</Filter>
+    </ClCompile>
+    <ClCompile Include="SampleView.cpp">
+      <Filter>Control</Filter>
+    </ClCompile>
+    <ClCompile Include="FontButton.cpp">
+      <Filter>Control</Filter>
+    </ClCompile>
+    <ClCompile Include="ColorButton.cpp">
+      <Filter>Control</Filter>
+    </ClCompile>
+    <ClCompile Include="TemplateComboBox.cpp">
+      <Filter>Control</Filter>
+    </ClCompile>
+    <ClCompile Include="Serialize.cpp">
+      <Filter>Serialize</Filter>
+    </ClCompile>
+    <ClCompile Include="SerializeDetailLoad.cpp">
+      <Filter>Serialize</Filter>
+    </ClCompile>
+    <ClCompile Include="SerializeDetailSave.cpp">
+      <Filter>Serialize</Filter>
+    </ClCompile>
+    <ClCompile Include="SerializeDisplayLoad.cpp">
+      <Filter>Serialize</Filter>
+    </ClCompile>
+    <ClCompile Include="SerializeDisplaySave.cpp">
+      <Filter>Serialize</Filter>
+    </ClCompile>
+    <ClCompile Include="SerializeOperationLoad.cpp">
+      <Filter>Serialize</Filter>
+    </ClCompile>
+    <ClCompile Include="SerializeOperationSave.cpp">
+      <Filter>Serialize</Filter>
+    </ClCompile>
+    <ClCompile Include="SerializeVideoLoad.cpp">
+      <Filter>Serialize</Filter>
+    </ClCompile>
+    <ClCompile Include="SerializeVideoSave.cpp">
+      <Filter>Serialize</Filter>
+    </ClCompile>
+    <ClCompile Include="DetailStartDlg.cpp">
+      <Filter>Dialog\Detail</Filter>
+    </ClCompile>
+    <ClCompile Include="DetailEndDlg.cpp">
+      <Filter>Dialog\Detail</Filter>
+    </ClCompile>
+    <ClCompile Include="Hook.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="DetailNetworkDlg.cpp">
+      <Filter>Dialog\Detail</Filter>
+    </ClCompile>
+    <ClCompile Include="DetailBrowserDlg.cpp">
+      <Filter>Dialog\Detail</Filter>
+    </ClCompile>
+    <ClCompile Include="OpenFileDlg.cpp">
+      <Filter>Dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="VersionDlg.cpp">
+      <Filter>Dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="LogDlg.cpp">
+      <Filter>Dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="Gesture.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="Shortcut.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="OperationShortcutDlg.cpp">
+      <Filter>Dialog\Operation</Filter>
+    </ClCompile>
+    <ClCompile Include="DetailTypeDlg.cpp">
+      <Filter>Dialog\Detail</Filter>
+    </ClCompile>
+    <ClCompile Include="ShortcutEdit.cpp">
+      <Filter>Control</Filter>
+    </ClCompile>
+    <ClCompile Include="CustomReferenceClock.cpp">
+      <Filter>DirectShow</Filter>
+    </ClCompile>
+    <ClCompile Include="BBSDlg.cpp">
+      <Filter>Dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="ResSampleView.cpp">
+      <Filter>Control</Filter>
+    </ClCompile>
+    <ClCompile Include="ResDlg.cpp">
+      <Filter>Dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="BaseBBS.cpp">
+      <Filter>BBS</Filter>
+    </ClCompile>
+    <ClCompile Include="BBSManager.cpp">
+      <Filter>BBS</Filter>
+    </ClCompile>
+    <ClCompile Include="BBSOperator.cpp">
+      <Filter>BBS</Filter>
+    </ClCompile>
+    <ClCompile Include="Mlang.cpp">
+      <Filter>BBS</Filter>
+    </ClCompile>
+    <ClCompile Include="ThreadDlg.cpp">
+      <Filter>Dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="CheckBoxStatusBar.cpp">
+      <Filter>Control</Filter>
+    </ClCompile>
+    <ClCompile Include="ChannelDlg.cpp">
+      <Filter>Dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="DisplayHintDlg.cpp">
+      <Filter>Dialog\Display</Filter>
+    </ClCompile>
+    <ClCompile Include="HintSampleView.cpp">
+      <Filter>Control</Filter>
+    </ClCompile>
+    <ClCompile Include="DisplayChannelDlg.cpp">
+      <Filter>Dialog\Display</Filter>
+    </ClCompile>
+    <ClCompile Include="ChannelSampleView.cpp">
+      <Filter>Control</Filter>
+    </ClCompile>
+    <ClCompile Include="PeerCast.cpp">
+      <Filter>PeerCast</Filter>
+    </ClCompile>
+    <ClCompile Include="PeerCastManager.cpp">
+      <Filter>PeerCast</Filter>
+    </ClCompile>
+    <ClCompile Include="OptionDlg.cpp">
+      <Filter>Dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="VideoAdjustDlg.cpp">
+      <Filter>Dialog\Video</Filter>
+    </ClCompile>
+    <ClCompile Include="MainDlg.cpp">
+      <Filter>Dialog\Main</Filter>
+    </ClCompile>
+    <ClCompile Include="MainDlgMenu.cpp">
+      <Filter>Dialog\Main</Filter>
+    </ClCompile>
+    <ClCompile Include="MainDlgSub.cpp">
+      <Filter>Dialog\Main</Filter>
+    </ClCompile>
+    <ClCompile Include="DisplayResDlg.cpp">
+      <Filter>Dialog\Display</Filter>
+    </ClCompile>
+    <ClCompile Include="CustomEdit.cpp">
+      <Filter>Control</Filter>
+    </ClCompile>
+    <ClCompile Include="DisplayBBSDlg.cpp">
+      <Filter>Dialog\Display</Filter>
+    </ClCompile>
+    <ClCompile Include="BBSSampleView.cpp">
+      <Filter>Control</Filter>
+    </ClCompile>
+    <ClCompile Include="WindowSnap.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="DisplayResBoxDlg.cpp">
+      <Filter>Dialog\Display</Filter>
+    </ClCompile>
+    <ClCompile Include="DisplayResBackDlg.cpp">
+      <Filter>Dialog\Display</Filter>
+    </ClCompile>
+    <ClCompile Include="DisplayResColor1Dlg.cpp">
+      <Filter>Dialog\Display</Filter>
+    </ClCompile>
+    <ClCompile Include="DisplayResColor2Dlg.cpp">
+      <Filter>Dialog\Display</Filter>
+    </ClCompile>
+    <ClCompile Include="Layout.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="FavoriteDlg.cpp">
+      <Filter>Dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="Snapshot.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="Splitter\AsyncReader.cpp">
+      <Filter>DirectShow\Splitter</Filter>
+    </ClCompile>
+    <ClCompile Include="Splitter\BaseSplitter.cpp">
+      <Filter>DirectShow\Splitter</Filter>
+    </ClCompile>
+    <ClCompile Include="Splitter\BaseSplitterFile.cpp">
+      <Filter>DirectShow\Splitter</Filter>
+    </ClCompile>
+    <ClCompile Include="Splitter\BaseSplitterFileEx.cpp">
+      <Filter>DirectShow\Splitter</Filter>
+    </ClCompile>
+    <ClCompile Include="Splitter\DSUtil.cpp">
+      <Filter>DirectShow\Splitter</Filter>
+    </ClCompile>
+    <ClCompile Include="Splitter\FLVMetaData.cpp">
+      <Filter>DirectShow\Splitter</Filter>
+    </ClCompile>
+    <ClCompile Include="Splitter\FLVSplitter.cpp">
+      <Filter>DirectShow\Splitter</Filter>
+    </ClCompile>
+    <ClCompile Include="Splitter\GolombBuffer.cpp">
+      <Filter>DirectShow\Splitter</Filter>
+    </ClCompile>
+    <ClCompile Include="Splitter\MultiFiles.cpp">
+      <Filter>DirectShow\Splitter</Filter>
+    </ClCompile>
+    <ClCompile Include="SyncLog.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="Logger.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="OperationVariationDlg.cpp">
+      <Filter>Dialog\Operation</Filter>
+    </ClCompile>
+    <ClCompile Include="LayeredWindow.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="BaseBuilder.cpp">
+      <Filter>DirectShow</Filter>
+    </ClCompile>
+    <ClCompile Include="OnlineBuilder.cpp">
+      <Filter>DirectShow</Filter>
+    </ClCompile>
+    <ClCompile Include="OfflineBuilder.cpp">
+      <Filter>DirectShow</Filter>
+    </ClCompile>
+    <ClCompile Include="PeerCastBuilder.cpp">
+      <Filter>DirectShow</Filter>
+    </ClCompile>
+    <ClCompile Include="TemplateListCtrl.cpp">
+      <Filter>Control</Filter>
+    </ClCompile>
+    <ClCompile Include="CustomListCtrl.cpp">
+      <Filter>Control</Filter>
+    </ClCompile>
+    <ClCompile Include="ReplaceDlg.cpp">
+      <Filter>Dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="DisplayInformationDlg.cpp">
+      <Filter>Dialog\Display</Filter>
+    </ClCompile>
+    <ClCompile Include="StatusLayout.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="DisplayInformationGeneralDlg.cpp">
+      <Filter>Dialog\Display</Filter>
+    </ClCompile>
+    <ClCompile Include="OperationWindowDlg.cpp">
+      <Filter>Dialog\Operation</Filter>
+    </ClCompile>
+    <ClCompile Include="DisplayResColor3Dlg.cpp">
+      <Filter>Dialog\Display</Filter>
+    </ClCompile>
+    <ClCompile Include="DetailNetworkGeneralDlg.cpp">
+      <Filter>Dialog\Detail</Filter>
+    </ClCompile>
+    <ClCompile Include="DetailTypeWMVDlg.cpp">
+      <Filter>Dialog\Detail</Filter>
+    </ClCompile>
+    <ClCompile Include="IMEEdit.cpp">
+      <Filter>Control</Filter>
+    </ClCompile>
+    <ClCompile Include="DisplayResIDDlg.cpp">
+      <Filter>Dialog\Display</Filter>
+    </ClCompile>
+    <ClCompile Include="DisplayResFormat1Dlg.cpp">
+      <Filter>Dialog\Display</Filter>
+    </ClCompile>
+    <ClCompile Include="DisplayResFormat2Dlg.cpp">
+      <Filter>Dialog\Display</Filter>
+    </ClCompile>
+    <ClCompile Include="HTMLEscape.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="LayoutCtrl.cpp">
+      <Filter>Control</Filter>
+    </ClCompile>
+    <ClCompile Include="FrameDlg.cpp">
+      <Filter>Dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="TestDlg.cpp">
+      <Filter>Dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="BBSRegex.cpp">
+      <Filter>BBS</Filter>
+    </ClCompile>
+    <ClCompile Include="BBSSkin.cpp">
+      <Filter>BBS</Filter>
+    </ClCompile>
+    <ClCompile Include="BBSCallback.cpp">
+      <Filter>BBS</Filter>
+    </ClCompile>
+    <ClCompile Include="CustomDHtmlDialog.cpp">
+      <Filter>Dialog\Browser</Filter>
+    </ClCompile>
+    <ClCompile Include="CustomEventHandler.cpp">
+      <Filter>Dialog\Browser</Filter>
+    </ClCompile>
+    <ClCompile Include="DHtmlUtl.cpp">
+      <Filter>Dialog\Browser</Filter>
+    </ClCompile>
+    <ClCompile Include="BrowserHook.cpp">
+      <Filter>Dialog\Browser</Filter>
+    </ClCompile>
+    <ClCompile Include="BrowserDlg.cpp">
+      <Filter>Dialog\Browser</Filter>
+    </ClCompile>
+    <ClCompile Include="PopupBrowserDlg.cpp">
+      <Filter>Dialog\Browser</Filter>
+    </ClCompile>
+    <ClCompile Include="ExtractBrowserDlg.cpp">
+      <Filter>Dialog\Browser</Filter>
+    </ClCompile>
+    <ClCompile Include="ExtractDlg.cpp">
+      <Filter>Dialog\Browser</Filter>
+    </ClCompile>
+    <ClCompile Include="BrowserDlgSub.cpp">
+      <Filter>Dialog\Browser</Filter>
+    </ClCompile>
+    <ClCompile Include="BrowserMenu.cpp">
+      <Filter>Dialog\Browser</Filter>
+    </ClCompile>
+    <ClCompile Include="SearchDlg.cpp">
+      <Filter>Dialog\Browser</Filter>
+    </ClCompile>
+    <ClCompile Include="DetailBBSCommonDlg.cpp">
+      <Filter>Dialog\DetailBBS</Filter>
+    </ClCompile>
+    <ClCompile Include="MFCPropertyGridCheckProperty.cpp">
+      <Filter>Control</Filter>
+    </ClCompile>
+    <ClCompile Include="MFCPropertyGridColorPropertyEx.cpp">
+      <Filter>Control</Filter>
+    </ClCompile>
+    <ClCompile Include="MFCPropertyGridComboProperty.cpp">
+      <Filter>Control</Filter>
+    </ClCompile>
+    <ClCompile Include="MFCPropertyGridNameCheckProperty.cpp">
+      <Filter>Control</Filter>
+    </ClCompile>
+    <ClCompile Include="MFCPropertyGridNumberProperty.cpp">
+      <Filter>Control</Filter>
+    </ClCompile>
+    <ClCompile Include="MFCPropertyGridOperator.cpp">
+      <Filter>Control</Filter>
+    </ClCompile>
+    <ClCompile Include="BasePropDlg.cpp">
+      <Filter>Dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="DetailBBSCommonNetworkDlg.cpp">
+      <Filter>Dialog\DetailBBS</Filter>
+    </ClCompile>
+    <ClCompile Include="DetailBBSCommonGeneralDlg.cpp">
+      <Filter>Dialog\DetailBBS</Filter>
+    </ClCompile>
+    <ClCompile Include="DetailBBSCommonThreadDlg.cpp">
+      <Filter>Dialog\DetailBBS</Filter>
+    </ClCompile>
+    <ClCompile Include="DetailBBSBarDlg.cpp">
+      <Filter>Dialog\DetailBBS</Filter>
+    </ClCompile>
+    <ClCompile Include="DetailBBSBarPopupDlg.cpp">
+      <Filter>Dialog\DetailBBS</Filter>
+    </ClCompile>
+    <ClCompile Include="DetailBBSBarThreadDlg.cpp">
+      <Filter>Dialog\DetailBBS</Filter>
+    </ClCompile>
+    <ClCompile Include="DetailBBSBarPostDlg.cpp">
+      <Filter>Dialog\DetailBBS</Filter>
+    </ClCompile>
+    <ClCompile Include="DetailBBSBrowserDlg.cpp">
+      <Filter>Dialog\DetailBBS</Filter>
+    </ClCompile>
+    <ClCompile Include="DetailBBSBrowserThreadDlg.cpp">
+      <Filter>Dialog\DetailBBS</Filter>
+    </ClCompile>
+    <ClCompile Include="DetailBBSBrowserPopupDlg.cpp">
+      <Filter>Dialog\DetailBBS</Filter>
+    </ClCompile>
+    <ClCompile Include="SkinConfigDlg.cpp">
+      <Filter>Dialog\DetailBBS</Filter>
+    </ClCompile>
+    <ClCompile Include="DetailBBSBrowserScrollDlg.cpp">
+      <Filter>Dialog\DetailBBS</Filter>
+    </ClCompile>
+    <ClCompile Include="DisplayResLatestDlg.cpp">
+      <Filter>Dialog\Display</Filter>
+    </ClCompile>
+    <ClCompile Include="ProcessManager.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="DetailBBSCommonFontDlg.cpp">
+      <Filter>Dialog\DetailBBS</Filter>
+    </ClCompile>
+    <ClCompile Include="DetailNetworkPeercastDlg.cpp">
+      <Filter>Dialog\Detail</Filter>
+    </ClCompile>
+    <ClCompile Include="DetailTypeFLVDlg.cpp">
+      <Filter>Dialog\Detail</Filter>
+    </ClCompile>
+    <ClCompile Include="MFCPropertyGridNameCheckNumberProperty.cpp">
+      <Filter>Control</Filter>
+    </ClCompile>
+    <ClCompile Include="MFCPropertyGridFolderProperty.cpp">
+      <Filter>Control</Filter>
+    </ClCompile>
+    <ClCompile Include="SimpleEdit.cpp">
+      <Filter>Control</Filter>
+    </ClCompile>
+    <ClCompile Include="MFCPropertyGridNameCheckColorPropertyEx.cpp">
+      <Filter>Control</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="PCRPlayer.rc">
+      <Filter>リソース ファイル</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+</Project>

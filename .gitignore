@@ -1,0 +1,92 @@
+# ============================================================
+# YAPCRPlayer .gitignore  (C++20 / Qt6 / CMake / MSVC / Windows)
+# ============================================================
+
+# ---- ビルド出力ディレクトリ ----
+/build/
+build-*/
+/out/
+cmake-build-*/
+[Dd]ebug/
+[Rr]elease/
+[Xx]64/
+[Xx]86/
+[Ww]in32/
+
+# ---- CMake ----
+CMakeCache.txt
+CMakeFiles/
+CMakeUserPresets.json
+cmake_install.cmake
+install_manifest.txt
+CTestTestfile.cmake
+_deps/
+Testing/
+
+# ---- Qt（生成物・ユーザ状態） ----
+moc_*.cpp
+moc_*.h
+moc_predefs.h
+qrc_*.cpp
+ui_*.h
+*.qmake.stash
+.qmake.cache
+*.pro.user
+*.pro.user.*
+*_qmlcache.*
+
+# ---- Visual Studio / MSVC ----
+.vs/
+*.user
+*.suo
+*.sdf
+*.opensdf
+*.aps
+*.ncb
+*.vcxproj.user
+ipch/
+enc_temp_folder/
+
+# ---- ビルド中間/デバッグ生成物 ----
+*.obj
+*.o
+*.pdb
+*.idb
+*.ilk
+*.exp
+*.tlog
+*.lastbuildstate
+*.pch
+*.gch
+
+# ---- 実行ファイル（リポジトリには置かない方針） ----
+*.exe
+
+# ---- OS ----
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# ---- エディタ / IDE ----
+.idea/
+*.swp
+*~
+# VS Code: 共有したい設定のみ許可
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+# ============================================================
+# 注記:
+# - submodule ディレクトリ (mpv/ , peercaststation/) は無視しない。
+# - libmpv の DLL/import lib は外部 (MPV_DIR) から参照し配布時に同梱する方針のため、
+#   *.dll / *.lib は意図的にここで広く無視していない（将来 third_party へ
+#   ベンダリングする場合に取りこぼさないため）。ビルド生成物は build/ 配下に出るので
+#   上のディレクトリ無視で十分カバーされる。
+# - 参照用 PCRPlayer/ の VS ユーザ状態 (*.suo/*.aps/*.ncb) は上のパターンで除外される。
+#   ソースの参照価値はコード本体にあり、これらは生成/ユーザ状態のため除外で問題ない。
+# ============================================================

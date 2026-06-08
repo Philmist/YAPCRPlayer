@@ -1,0 +1,675 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{5718B82A-0B3E-432F-9F29-B20688D2A754}</ProjectGuid>
+    <RootNamespace>PCRPlayer</RootNamespace>
+    <Keyword>MFCProj</Keyword>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+    <UseOfMfc>Static</UseOfMfc>
+    <PlatformToolset>v140_xp</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+    <UseOfMfc>Static</UseOfMfc>
+    <PlatformToolset>v140_xp</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+    <UseOfMfc>Static</UseOfMfc>
+    <PlatformToolset>v140_xp</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+    <UseOfMfc>Static</UseOfMfc>
+    <PlatformToolset>v140_xp</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Program Files\Microsoft SDKs\Windows\v7.1\Samples\multimedia\directshow\baseclasses\lib2015\x86;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Program Files\Microsoft SDKs\Windows\v7.1\Samples\multimedia\directshow\baseclasses\lib2015\x64;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <IncludePath>$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Program Files\Microsoft SDKs\Windows\v7.1\Samples\multimedia\directshow\baseclasses\lib2015\x86;$(LibraryPath)</LibraryPath>
+    <ExtensionsToDeleteOnClean>*.iobj;*.ipdb;$(ExtensionsToDeleteOnClean)</ExtensionsToDeleteOnClean>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <IncludePath>$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Program Files\Microsoft SDKs\Windows\v7.1\Samples\multimedia\directshow\baseclasses\lib2015\x64;$(LibraryPath)</LibraryPath>
+    <ExtensionsToDeleteOnClean>*.iobj;*.ipdb;$(ExtensionsToDeleteOnClean)</ExtensionsToDeleteOnClean>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>-Zm300 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <Midl>
+      <MkTypLibCompatible>false</MkTypLibCompatible>
+      <ValidateAllParameters>true</ValidateAllParameters>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </Midl>
+    <ResourceCompile>
+      <Culture>0x0411</Culture>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>-Zm200 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <Midl>
+      <MkTypLibCompatible>false</MkTypLibCompatible>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </Midl>
+    <ResourceCompile>
+      <Culture>0x0411</Culture>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>-Zm300 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+    <Midl>
+      <MkTypLibCompatible>false</MkTypLibCompatible>
+      <ValidateAllParameters>true</ValidateAllParameters>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </Midl>
+    <ResourceCompile>
+      <Culture>0x0411</Culture>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Manifest>
+      <EnableDpiAwareness>true</EnableDpiAwareness>
+    </Manifest>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>-Zm200 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+    <Midl>
+      <MkTypLibCompatible>false</MkTypLibCompatible>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </Midl>
+    <ResourceCompile>
+      <Culture>0x0411</Culture>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <None Include="ReadMe.txt" />
+    <None Include="res\bitmap1.bmp" />
+    <None Include="res\bitmap2.bmp" />
+    <None Include="res\blank.bmp" />
+    <None Include="res\box.bmp" />
+    <None Include="res\icon1.ico" />
+    <None Include="res\PCRPlayer.ico" />
+    <None Include="res\PCRPlayer.rc2" />
+    <None Include="res\write.bmp" />
+    <None Include="res\write.ico" />
+    <None Include="res\write.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="AsyncBufferingLoader.h" />
+    <ClInclude Include="AudioRenderer.h" />
+    <ClInclude Include="BaseBBS.h" />
+    <ClInclude Include="BaseBuilder.h" />
+    <ClInclude Include="BasePropDlg.h" />
+    <ClInclude Include="BBSCallback.h" />
+    <ClInclude Include="BBSDlg.h" />
+    <ClInclude Include="BBSManager.h" />
+    <ClInclude Include="BBSOperator.h" />
+    <ClInclude Include="BBSRegex.h" />
+    <ClInclude Include="BBSSkin.h" />
+    <ClInclude Include="BrowserDlg.h" />
+    <ClInclude Include="BrowserHook.h" />
+    <ClInclude Include="BrowserMenu.h" />
+    <ClInclude Include="DetailBBSBarDlg.h" />
+    <ClInclude Include="DetailBBSBarPopupDlg.h" />
+    <ClInclude Include="DetailBBSBarPostDlg.h" />
+    <ClInclude Include="DetailBBSBarThreadDlg.h" />
+    <ClInclude Include="DetailBBSBrowserDlg.h" />
+    <ClInclude Include="DetailBBSBrowserPopupDlg.h" />
+    <ClInclude Include="DetailBBSBrowserScrollDlg.h" />
+    <ClInclude Include="DetailBBSBrowserThreadDlg.h" />
+    <ClInclude Include="DetailBBSCommonFontDlg.h" />
+    <ClInclude Include="DetailBBSCommonGeneralDlg.h" />
+    <ClInclude Include="DetailBBSCommonNetworkDlg.h" />
+    <ClInclude Include="ChannelDlg.h" />
+    <ClInclude Include="ChannelSampleView.h" />
+    <ClInclude Include="CheckBoxStatusBar.h" />
+    <ClInclude Include="CustomDHtmlDialog.h" />
+    <ClInclude Include="CustomEdit.h" />
+    <ClInclude Include="CustomEventHandler.h" />
+    <ClInclude Include="DetailBBSCommonDlg.h" />
+    <ClInclude Include="DetailBBSCommonThreadDlg.h" />
+    <ClInclude Include="DetailNetworkGeneralDlg.h" />
+    <ClInclude Include="DetailNetworkPeercastDlg.h" />
+    <ClInclude Include="DetailTypeFLVDlg.h" />
+    <ClInclude Include="DetailTypeWMVDlg.h" />
+    <ClInclude Include="DHtmlUtl.h" />
+    <ClInclude Include="DisplayInformationDlg.h" />
+    <ClInclude Include="DisplayInformationGeneralDlg.h" />
+    <ClInclude Include="DisplayResColor3Dlg.h" />
+    <ClInclude Include="DisplayResFormat2Dlg.h" />
+    <ClInclude Include="DisplayResIDDlg.h" />
+    <ClInclude Include="DisplayResLatestDlg.h" />
+    <ClInclude Include="ExtractBrowserDlg.h" />
+    <ClInclude Include="ExtractDlg.h" />
+    <ClInclude Include="FrameDlg.h" />
+    <ClInclude Include="IMEEdit.h" />
+    <ClInclude Include="LayeredWindow.h" />
+    <ClInclude Include="LayoutCtrl.h" />
+    <ClInclude Include="Logger.h" />
+    <ClInclude Include="MFCPropertyGridCheckProperty.h" />
+    <ClInclude Include="MFCPropertyGridColorPropertyEx.h" />
+    <ClInclude Include="MFCPropertyGridComboProperty.h" />
+    <ClInclude Include="MFCPropertyGridFolderProperty.h" />
+    <ClInclude Include="MFCPropertyGridNameCheckColorPropertyEx.h" />
+    <ClInclude Include="MFCPropertyGridNameCheckNumberProperty.h" />
+    <ClInclude Include="MFCPropertyGridNameCheckProperty.h" />
+    <ClInclude Include="MFCPropertyGridNumberProperty.h" />
+    <ClInclude Include="MFCPropertyGridOperator.h" />
+    <ClInclude Include="OfflineBuilder.h" />
+    <ClInclude Include="OnlineBuilder.h" />
+    <ClInclude Include="OperationWindowDlg.h" />
+    <ClInclude Include="PeerCastBuilder.h" />
+    <ClInclude Include="CustomListCtrl.h" />
+    <ClInclude Include="DisplayChannelDlg.h" />
+    <ClInclude Include="DisplayResBackDlg.h" />
+    <ClInclude Include="DisplayResBoxDlg.h" />
+    <ClInclude Include="DisplayResColor1Dlg.h" />
+    <ClInclude Include="DisplayResColor2Dlg.h" />
+    <ClInclude Include="DisplayResFormat1Dlg.h" />
+    <ClInclude Include="FavoriteDlg.h" />
+    <ClInclude Include="HTMLEscape.h" />
+    <ClInclude Include="Mlang.h" />
+    <ClInclude Include="OptionDlg.h" />
+    <ClInclude Include="PeerCastManager.h" />
+    <ClInclude Include="PopupBrowserDlg.h" />
+    <ClInclude Include="ProcessManager.h" />
+    <ClInclude Include="ReplaceElement.h" />
+    <ClInclude Include="ReplaceDlg.h" />
+    <ClInclude Include="ResDlg.h" />
+    <ClInclude Include="SearchDlg.h" />
+    <ClInclude Include="SimpleEdit.h" />
+    <ClInclude Include="SkinConfigDlg.h" />
+    <ClInclude Include="Snapshot.h" />
+    <ClInclude Include="Splitter\AsyncReader.h" />
+    <ClInclude Include="Splitter\BaseSplitter.h" />
+    <ClInclude Include="Splitter\BaseSplitterFile.h" />
+    <ClInclude Include="Splitter\BaseSplitterFileEx.h" />
+    <ClInclude Include="Splitter\DSUtil.h" />
+    <ClInclude Include="Splitter\FLVMetaData.h" />
+    <ClInclude Include="Splitter\FLVSplitter.h" />
+    <ClInclude Include="Splitter\GolombBuffer.h" />
+    <ClInclude Include="Splitter\IBitRateInfo.h" />
+    <ClInclude Include="Splitter\IBufferInfo.h" />
+    <ClInclude Include="Splitter\IKeyFrameInfo.h" />
+    <ClInclude Include="Splitter\moreuuids.h" />
+    <ClInclude Include="Splitter\MultiFiles.h" />
+    <ClInclude Include="StatusLayout.h" />
+    <ClInclude Include="SyncThread.h" />
+    <ClInclude Include="Layout.h" />
+    <ClInclude Include="TestDlg.h" />
+    <ClInclude Include="ThreadDlg.h" />
+    <ClInclude Include="BBSSampleView.h" />
+    <ClInclude Include="DisplayBBSDlg.h" />
+    <ClInclude Include="DisplayResDlg.h" />
+    <ClInclude Include="BoxDlg.h" />
+    <ClInclude Include="ColorButton.h" />
+    <ClInclude Include="CustomReferenceClock.h" />
+    <ClInclude Include="Debug.h" />
+    <ClInclude Include="DetailBrowserDlg.h" />
+    <ClInclude Include="DetailDecoderDlg.h" />
+    <ClInclude Include="DetailEndDlg.h" />
+    <ClInclude Include="DetailNetworkDlg.h" />
+    <ClInclude Include="DetailSnapshotDlg.h" />
+    <ClInclude Include="DetailStartDlg.h" />
+    <ClInclude Include="DetailTypeDlg.h" />
+    <ClInclude Include="DisplayAspectDlg.h" />
+    <ClInclude Include="DisplayDatetimeDlg.h" />
+    <ClInclude Include="DisplaySeekDlg.h" />
+    <ClInclude Include="DisplayStatusDlg.h" />
+    <ClInclude Include="DisplayHintDlg.h" />
+    <ClInclude Include="DisplayWindowDlg.h" />
+    <ClInclude Include="EVRCustom\common\AsyncCB.h" />
+    <ClInclude Include="EVRCustom\common\BufferLock.h" />
+    <ClInclude Include="EVRCustom\common\ClassFactory.h" />
+    <ClInclude Include="EVRCustom\common\common.h" />
+    <ClInclude Include="EVRCustom\common\critsec.h" />
+    <ClInclude Include="EVRCustom\common\GrowArray.h" />
+    <ClInclude Include="EVRCustom\common\linklist.h" />
+    <ClInclude Include="EVRCustom\common\logging.h" />
+    <ClInclude Include="EVRCustom\common\logmediatype.h" />
+    <ClInclude Include="EVRCustom\common\mediatype.h" />
+    <ClInclude Include="EVRCustom\common\mfutils.h" />
+    <ClInclude Include="EVRCustom\common\PropVar.h" />
+    <ClInclude Include="EVRCustom\common\registry.h" />
+    <ClInclude Include="EVRCustom\common\TinyMap.h" />
+    <ClInclude Include="EVRCustom\common\trace.h" />
+    <ClInclude Include="EVRCustom\CoordGeom.h" />
+    <ClInclude Include="EVRCustom\D3DUtl.h" />
+    <ClInclude Include="EVRCustom\DX9Shaders.h" />
+    <ClInclude Include="EVRCustom\EVRPresenter.h" />
+    <ClInclude Include="EVRCustom\Helpers.h" />
+    <ClInclude Include="EVRCustom\PresentEngine.h" />
+    <ClInclude Include="EVRCustom\Presenter.h" />
+    <ClInclude Include="EVRCustom\scheduler.h" />
+    <ClInclude Include="FontButton.h" />
+    <ClInclude Include="ResSampleView.h" />
+    <ClInclude Include="ShortcutEdit.h" />
+    <ClInclude Include="DSPlayer.h" />
+    <ClInclude Include="Global.h" />
+    <ClInclude Include="GraphManager.h" />
+    <ClInclude Include="HintDlg.h" />
+    <ClInclude Include="Hook.h" />
+    <ClInclude Include="Shortcut.h" />
+    <ClInclude Include="LogDlg.h" />
+    <ClInclude Include="MemSourceFilter.h" />
+    <ClInclude Include="Gesture.h" />
+    <ClInclude Include="Network.h" />
+    <ClInclude Include="OpenFileDlg.h" />
+    <ClInclude Include="OperationShortcutDlg.h" />
+    <ClInclude Include="OperationVariationDlg.h" />
+    <ClInclude Include="OperationMouseDlg.h" />
+    <ClInclude Include="PCRPlayer.h" />
+    <ClInclude Include="MainDlg.h" />
+    <ClInclude Include="PeerCast.h" />
+    <ClInclude Include="Resource.h" />
+    <ClInclude Include="FileSource.h" />
+    <ClInclude Include="SampleView.h" />
+    <ClInclude Include="SeekDlg.h" />
+    <ClInclude Include="SeekSampleView.h" />
+    <ClInclude Include="Serialize.h" />
+    <ClInclude Include="SerializeDetail.h" />
+    <ClInclude Include="SerializeDisplay.h" />
+    <ClInclude Include="SerializeOperation.h" />
+    <ClInclude Include="SerializeVideo.h" />
+    <ClInclude Include="StatusDlg.h" />
+    <ClInclude Include="StatusSampleView.h" />
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="SubpaneDlg.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="TemplateComboBox.h" />
+    <ClInclude Include="SyncLog.h" />
+    <ClInclude Include="SyncValue.h" />
+    <ClInclude Include="HintSampleView.h" />
+    <ClInclude Include="Util.h" />
+    <ClInclude Include="TemplateList.h" />
+    <ClInclude Include="TemplateListCtrl.h" />
+    <ClInclude Include="VersionDlg.h" />
+    <ClInclude Include="VideoAdjustDlg.h" />
+    <ClInclude Include="VideoRenderer.h" />
+    <ClInclude Include="WindowSnap.h" />
+    <ClInclude Include="XmlParser.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="AsyncBufferingLoader.cpp" />
+    <ClCompile Include="AudioRenderer.cpp" />
+    <ClCompile Include="BaseBBS.cpp" />
+    <ClCompile Include="BaseBuilder.cpp" />
+    <ClCompile Include="BasePropDlg.cpp" />
+    <ClCompile Include="BBSCallback.cpp" />
+    <ClCompile Include="BBSDlg.cpp" />
+    <ClCompile Include="BBSManager.cpp" />
+    <ClCompile Include="BBSOperator.cpp" />
+    <ClCompile Include="BBSRegex.cpp" />
+    <ClCompile Include="BBSSkin.cpp" />
+    <ClCompile Include="BrowserDlg.cpp" />
+    <ClCompile Include="BrowserDlgSub.cpp" />
+    <ClCompile Include="BrowserHook.cpp" />
+    <ClCompile Include="BrowserMenu.cpp" />
+    <ClCompile Include="ChannelDlg.cpp" />
+    <ClCompile Include="ChannelSampleView.cpp" />
+    <ClCompile Include="CheckBoxStatusBar.cpp" />
+    <ClCompile Include="CustomDHtmlDialog.cpp" />
+    <ClCompile Include="CustomEdit.cpp" />
+    <ClCompile Include="CustomEventHandler.cpp" />
+    <ClCompile Include="DetailBBSBarDlg.cpp" />
+    <ClCompile Include="DetailBBSBarPopupDlg.cpp" />
+    <ClCompile Include="DetailBBSBarPostDlg.cpp" />
+    <ClCompile Include="DetailBBSBarThreadDlg.cpp" />
+    <ClCompile Include="DetailBBSBrowserDlg.cpp" />
+    <ClCompile Include="DetailBBSBrowserPopupDlg.cpp" />
+    <ClCompile Include="DetailBBSBrowserScrollDlg.cpp" />
+    <ClCompile Include="DetailBBSBrowserThreadDlg.cpp" />
+    <ClCompile Include="DetailBBSCommonDlg.cpp" />
+    <ClCompile Include="DetailBBSCommonFontDlg.cpp" />
+    <ClCompile Include="DetailBBSCommonGeneralDlg.cpp" />
+    <ClCompile Include="DetailBBSCommonNetworkDlg.cpp" />
+    <ClCompile Include="DetailBBSCommonThreadDlg.cpp" />
+    <ClCompile Include="DetailNetworkGeneralDlg.cpp" />
+    <ClCompile Include="DetailNetworkPeercastDlg.cpp" />
+    <ClCompile Include="DetailTypeFLVDlg.cpp" />
+    <ClCompile Include="DetailTypeWMVDlg.cpp" />
+    <ClCompile Include="DHtmlUtl.cpp" />
+    <ClCompile Include="DisplayInformationDlg.cpp" />
+    <ClCompile Include="DisplayInformationGeneralDlg.cpp" />
+    <ClCompile Include="DisplayResColor3Dlg.cpp" />
+    <ClCompile Include="DisplayResFormat2Dlg.cpp" />
+    <ClCompile Include="DisplayResIDDlg.cpp" />
+    <ClCompile Include="DisplayResLatestDlg.cpp" />
+    <ClCompile Include="ExtractBrowserDlg.cpp" />
+    <ClCompile Include="ExtractDlg.cpp" />
+    <ClCompile Include="FrameDlg.cpp" />
+    <ClCompile Include="HTMLEscape.cpp" />
+    <ClCompile Include="IMEEdit.cpp" />
+    <ClCompile Include="LayeredWindow.cpp" />
+    <ClCompile Include="LayoutCtrl.cpp" />
+    <ClCompile Include="Logger.cpp" />
+    <ClCompile Include="MFCPropertyGridCheckProperty.cpp" />
+    <ClCompile Include="MFCPropertyGridColorPropertyEx.cpp" />
+    <ClCompile Include="MFCPropertyGridComboProperty.cpp" />
+    <ClCompile Include="MFCPropertyGridFolderProperty.cpp" />
+    <ClCompile Include="MFCPropertyGridNameCheckColorPropertyEx.cpp" />
+    <ClCompile Include="MFCPropertyGridNameCheckNumberProperty.cpp" />
+    <ClCompile Include="MFCPropertyGridNameCheckProperty.cpp" />
+    <ClCompile Include="MFCPropertyGridNumberProperty.cpp" />
+    <ClCompile Include="MFCPropertyGridOperator.cpp" />
+    <ClCompile Include="OfflineBuilder.cpp" />
+    <ClCompile Include="OnlineBuilder.cpp" />
+    <ClCompile Include="OperationWindowDlg.cpp" />
+    <ClCompile Include="PeerCastBuilder.cpp" />
+    <ClCompile Include="CustomListCtrl.cpp" />
+    <ClCompile Include="DisplayChannelDlg.cpp" />
+    <ClCompile Include="DisplayResBackDlg.cpp" />
+    <ClCompile Include="DisplayResBoxDlg.cpp" />
+    <ClCompile Include="DisplayResColor1Dlg.cpp" />
+    <ClCompile Include="DisplayResColor2Dlg.cpp" />
+    <ClCompile Include="DisplayResFormat1Dlg.cpp" />
+    <ClCompile Include="FavoriteDlg.cpp" />
+    <ClCompile Include="Mlang.cpp" />
+    <ClCompile Include="OptionDlg.cpp" />
+    <ClCompile Include="PeerCastManager.cpp" />
+    <ClCompile Include="PopupBrowserDlg.cpp" />
+    <ClCompile Include="ProcessManager.cpp" />
+    <ClCompile Include="ReplaceDlg.cpp" />
+    <ClCompile Include="ResDlg.cpp" />
+    <ClCompile Include="Layout.cpp" />
+    <ClCompile Include="SearchDlg.cpp" />
+    <ClCompile Include="SimpleEdit.cpp" />
+    <ClCompile Include="SkinConfigDlg.cpp" />
+    <ClCompile Include="Snapshot.cpp" />
+    <ClCompile Include="Splitter\AsyncReader.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../stdafx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="Splitter\BaseSplitter.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../stdafx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="Splitter\BaseSplitterFile.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../stdafx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="Splitter\BaseSplitterFileEx.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../stdafx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="Splitter\DSUtil.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../stdafx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="Splitter\FLVMetaData.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../stdafx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="Splitter\FLVSplitter.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../stdafx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="Splitter\GolombBuffer.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../stdafx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="Splitter\MultiFiles.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../stdafx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="StatusLayout.cpp" />
+    <ClCompile Include="SyncLog.cpp" />
+    <ClCompile Include="TestDlg.cpp" />
+    <ClCompile Include="ThreadDlg.cpp" />
+    <ClCompile Include="BBSSampleView.cpp" />
+    <ClCompile Include="DisplayBBSDlg.cpp" />
+    <ClCompile Include="DisplayResDlg.cpp" />
+    <ClCompile Include="BoxDlg.cpp" />
+    <ClCompile Include="ColorButton.cpp" />
+    <ClCompile Include="CustomReferenceClock.cpp" />
+    <ClCompile Include="DetailBrowserDlg.cpp" />
+    <ClCompile Include="DetailDecoderDlg.cpp" />
+    <ClCompile Include="DetailEndDlg.cpp" />
+    <ClCompile Include="DetailNetworkDlg.cpp" />
+    <ClCompile Include="DetailSnapshotDlg.cpp" />
+    <ClCompile Include="DetailStartDlg.cpp" />
+    <ClCompile Include="DetailTypeDlg.cpp" />
+    <ClCompile Include="DisplayAspectDlg.cpp" />
+    <ClCompile Include="DisplayDatetimeDlg.cpp" />
+    <ClCompile Include="DisplaySeekDlg.cpp" />
+    <ClCompile Include="DisplayStatusDlg.cpp" />
+    <ClCompile Include="DisplayHintDlg.cpp" />
+    <ClCompile Include="DisplayWindowDlg.cpp" />
+    <ClCompile Include="EVRCustom\CoordGeom.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="EVRCustom\D3DUtl.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="EVRCustom\DX9Shaders.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="EVRCustom\Helpers.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="EVRCustom\PresentEngine.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="EVRCustom\Presenter.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="EVRCustom\scheduler.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="FontButton.cpp" />
+    <ClCompile Include="ResSampleView.cpp" />
+    <ClCompile Include="ShortcutEdit.cpp" />
+    <ClCompile Include="Hook.cpp" />
+    <ClCompile Include="LogDlg.cpp" />
+    <ClCompile Include="Gesture.cpp" />
+    <ClCompile Include="OpenFileDlg.cpp" />
+    <ClCompile Include="SerializeDetailLoad.cpp" />
+    <ClCompile Include="SerializeDetailSave.cpp" />
+    <ClCompile Include="SerializeDisplayLoad.cpp" />
+    <ClCompile Include="SerializeDisplaySave.cpp" />
+    <ClCompile Include="DSPlayer.cpp" />
+    <ClCompile Include="Global.cpp" />
+    <ClCompile Include="GraphManager.cpp" />
+    <ClCompile Include="HintDlg.cpp" />
+    <ClCompile Include="Shortcut.cpp" />
+    <ClCompile Include="MainDlgMenu.cpp" />
+    <ClCompile Include="MainDlgSub.cpp" />
+    <ClCompile Include="MemSourceFilter.cpp" />
+    <ClCompile Include="Network.cpp" />
+    <ClCompile Include="OperationShortcutDlg.cpp" />
+    <ClCompile Include="OperationVariationDlg.cpp" />
+    <ClCompile Include="OperationMouseDlg.cpp" />
+    <ClCompile Include="PCRPlayer.cpp" />
+    <ClCompile Include="MainDlg.cpp" />
+    <ClCompile Include="FileSource.cpp" />
+    <ClCompile Include="PeerCast.cpp" />
+    <ClCompile Include="SampleView.cpp" />
+    <ClCompile Include="SeekDlg.cpp" />
+    <ClCompile Include="SeekSampleView.cpp" />
+    <ClCompile Include="Serialize.cpp" />
+    <ClCompile Include="SerializeOperationLoad.cpp" />
+    <ClCompile Include="SerializeOperationSave.cpp" />
+    <ClCompile Include="SerializeVideoLoad.cpp" />
+    <ClCompile Include="SerializeVideoSave.cpp" />
+    <ClCompile Include="StatusDlg.cpp" />
+    <ClCompile Include="StatusSampleView.cpp" />
+    <ClCompile Include="stdafx.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="SubpaneDlg.cpp" />
+    <ClCompile Include="TemplateComboBox.cpp" />
+    <ClCompile Include="HintSampleView.cpp" />
+    <ClCompile Include="Util.cpp" />
+    <ClCompile Include="TemplateListCtrl.cpp" />
+    <ClCompile Include="VersionDlg.cpp" />
+    <ClCompile Include="VideoAdjustDlg.cpp" />
+    <ClCompile Include="VideoRenderer.cpp" />
+    <ClCompile Include="WindowSnap.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="PCRPlayer.rc" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+  <ProjectExtensions>
+    <VisualStudio>
+      <UserProperties RESOURCE_FILE="PCRPlayer.rc" />
+    </VisualStudio>
+  </ProjectExtensions>
+</Project>
