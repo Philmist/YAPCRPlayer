@@ -21,16 +21,22 @@ if(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
 endif()
 
 # --- 依存 ---
-# M0 は Core/Gui/Widgets のみ。Network / Core5Compat は M1(再生+CLI)/M3(BBS) で追加する。
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
+# M0 は Core/Gui/Widgets のみ。M1 で Network 追加。Core5Compat は M3(BBS) で追加する。
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network)
 qt_standard_project_setup()        # AUTOMOC/AUTOUIC/AUTORCC を有効化
 
 find_package(Mpv REQUIRED)
 
-# --- モジュール（依存は一方向 DAG: common <- player <- app） ---
+# --- テスト ---
+enable_testing()
+
+# --- モジュール（依存は一方向 DAG: common <- net <- peercast, common <- player, app <- 全部） ---
 add_subdirectory(src/common)
+add_subdirectory(src/net)
+add_subdirectory(src/peercast)
 add_subdirectory(src/player)
 add_subdirectory(src/app)
+add_subdirectory(tests)
 
 # --- 配布補助ターゲット: cmake --build --target deploy ---
 # windeployqt で Qt の DLL/プラグインを集め、libmpv-2.dll を同梱した dist/ を作る。

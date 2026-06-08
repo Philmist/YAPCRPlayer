@@ -2,11 +2,17 @@ qt_add_executable(YAPCRPlayer WIN32
     src/main.cpp
     src/main_window.cpp
     src/main_window.h
+    src/video_host_widget.cpp
+    src/video_host_widget.h
+    src/session_controller.cpp
+    src/session_controller.h
 )
 
 target_link_libraries(YAPCRPlayer PRIVATE
     Qt6::Widgets
     yapcr::player
+    yapcr::peercast
+    yapcr::net
     yapcr::common
 )
 
