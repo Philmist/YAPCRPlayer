@@ -329,4 +329,18 @@ void SessionController::onBbsLoadFailed(bbs::BbsPhase phase, const QString& reas
     emit statusMessage(tr("BBS 取得エラー [%1]: %2").arg(phaseStr, reason));
 }
 
+// ---- BBS extract クエリ（M3.7）-------------------------------------------------
+
+QList<bbs::ResInfo> SessionController::bbsByRef(int resNumber) const
+{
+    if (!bbs_ || !bbs_->isValid()) return {};
+    return bbs_->store().byRef(resNumber);
+}
+
+QList<bbs::ResInfo> SessionController::bbsByRange(bbs::Range range) const
+{
+    if (!bbs_ || !bbs_->isValid()) return {};
+    return bbs_->store().byRange(range);
+}
+
 }  // namespace yapcr::app

@@ -55,6 +55,14 @@ public:
     // 書き込み中は bbsPostFinished が emit されるまで再呼び出し不可（UI 側が無効化する）。
     Q_INVOKABLE void bbsPost(const QString& message);
 
+    // ---- BBS extract クエリ（M3.7 hover ポップアップ用） -----
+
+    // resNumber を参照しているレスを返す。BbsSession 未初期化なら空を返す。
+    QList<yapcr::bbs::ResInfo> bbsByRef(int resNumber) const;
+
+    // 指定範囲のレスを返す。
+    QList<yapcr::bbs::ResInfo> bbsByRange(yapcr::bbs::Range range) const;
+
     QString currentPath()    const { return path_; }
     QString currentName()    const { return name_; }
     QString currentContact() const { return contact_; }

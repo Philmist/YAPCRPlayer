@@ -4,6 +4,7 @@
 #include "session_controller.h"
 #include "res_list_pane.h"   // bbs/models.h を推移的に含む（yapcr::bbs::ResInfo）
 #include "res_input_bar.h"
+#include "bbs/models.h"
 #include "player/mpv_backend.h"
 #include "common/version.h"
 
@@ -80,6 +81,14 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
                     inputDock_->show();
                 }
             });
+
+    // M3.7: hover ポップアップ用クエリプロバイダ注入
+    resListPane_->setByRefProvider([this](int n) {
+        return session_->bbsByRef(n);
+    });
+    resListPane_->setByRangeProvider([this](yapcr::bbs::Range r) {
+        return session_->bbsByRange(r);
+    });
     connect(session_, &SessionController::bbsPostFinished,
             this, [this](bool ok) {
                 resInputBar_->setInputEnabled(true);

@@ -10,6 +10,8 @@ qt_add_executable(YAPCRPlayer WIN32
     src/res_list_pane.h
     src/res_input_bar.cpp      # M3.6: 下部レス入力バー
     src/res_input_bar.h
+    src/res_popup.cpp          # M3.7: hover レス・ポップアップ
+    src/res_popup.h
 )
 
 target_link_libraries(YAPCRPlayer PRIVATE
