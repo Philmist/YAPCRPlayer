@@ -1,9 +1,11 @@
 #include <QTest>
 #include <QFile>
 
+#include "bbs/bbs_session.h"
 #include "bbs/board_url.h"
 #include "bbs/charset.h"
 #include "bbs/dat.h"
+#include "bbs/dat_store.h"
 #include "bbs/extract.h"
 #include "bbs/models.h"
 #include "bbs/setting.h"
@@ -844,6 +846,563 @@ private slots:
         // 7 文字以下は当たらない
         const QString id = extractId(QStringLiteral("ID:Abc123"));  // 7 文字
         QVERIFY2(id.isEmpty(), "7 文字 ID は当たらない");
+    }
+
+    // ======== DatStore — ヘルパー ========
+
+    // 手組み ResInfo（jpnkn: number 空、id/message をカスタマイズ可）
+    static yapcr::bbs::ResInfo makeRes(
+        const QString& name     = QStringLiteral("名無し"),
+        const QString& message  = QString(),
+        const QString& id       = QString())
+    {
+        using namespace yapcr::bbs;
+        ResInfo r;
+        r.name    = name;
+        r.message = message;
+        r.id      = id;
+        return r;
+    }
+
+    // ======== DatStore — dedup ========
+
+    void datStore_dedup_same_list()
+    {
+        using namespace yapcr::bbs;
+        // 同じリストを 2 回 merge → 2 回目は 0 件追加
+        QList<ResInfo> list;
+        list.append(makeRes(QStringLiteral("res1")));
+        list.append(makeRes(QStringLiteral("res2")));
+        list.append(makeRes(QStringLiteral("res3")));
+
+        DatStore store;
+        QCOMPARE(store.merge(list, BoardType::Jpnkn), 3);
+        QCOMPARE(store.count(), 3);
+        QCOMPARE(store.merge(list, BoardType::Jpnkn), 0);  // 新着なし
+        QCOMPARE(store.count(), 3);
+    }
+
+    void datStore_dedup_incremental()
+    {
+        using namespace yapcr::bbs;
+        // 3 件 → 5 件に増えた全件リストで 2 回目 merge → +2 のみ追加
+        QList<ResInfo> first, second;
+        for (int i = 1; i <= 3; ++i) {
+            first.append(makeRes(QStringLiteral("res%1").arg(i)));
+        }
+        second = first;
+        second.append(makeRes(QStringLiteral("res4")));
+        second.append(makeRes(QStringLiteral("res5")));
+
+        DatStore store;
+        QCOMPARE(store.merge(first,  BoardType::Jpnkn), 3);
+        QCOMPARE(store.merge(second, BoardType::Jpnkn), 2);
+        QCOMPARE(store.count(), 5);
+    }
+
+    void datStore_dedup_smaller_list_ignored()
+    {
+        using namespace yapcr::bbs;
+        // より小さいリストは何もしない（サーバ応答が縮んだ場合など）
+        QList<ResInfo> list3, list2;
+        for (int i = 1; i <= 3; ++i) { list3.append(makeRes()); }
+        for (int i = 1; i <= 2; ++i) { list2.append(makeRes()); }
+
+        DatStore store;
+        store.merge(list3, BoardType::Jpnkn);
+        QCOMPARE(store.merge(list2, BoardType::Jpnkn), 0);
+        QCOMPARE(store.count(), 3);
+    }
+
+    // ======== DatStore — 番号付与 ========
+
+    void datStore_number_jpnkn()
+    {
+        using namespace yapcr::bbs;
+        // jpnkn: number が空 → 連番 "1", "2", "3"
+        QList<ResInfo> list;
+        for (int i = 0; i < 3; ++i) { list.append(makeRes()); }
+
+        DatStore store;
+        store.merge(list, BoardType::Jpnkn);
+        const QList<ResInfo> all = store.all();
+        QCOMPARE(all.size(), 3);
+        QCOMPARE(all[0].number, QStringLiteral("1"));
+        QCOMPARE(all[1].number, QStringLiteral("2"));
+        QCOMPARE(all[2].number, QStringLiteral("3"));
+    }
+
+    void datStore_number_shitaraba_preserved()
+    {
+        using namespace yapcr::bbs;
+        // したらば: parseDat が付与した number は上書きしない
+        QList<ResInfo> list;
+        for (int i = 1; i <= 3; ++i) {
+            ResInfo r = makeRes();
+            r.number = QString::number(i);  // parseDat が付与済み
+            list.append(r);
+        }
+
+        DatStore store;
+        store.merge(list, BoardType::Shitaraba);
+        const QList<ResInfo> all = store.all();
+        QCOMPARE(all[0].number, QStringLiteral("1"));
+        QCOMPARE(all[2].number, QStringLiteral("3"));
+    }
+
+    // ======== DatStore — latest フラグ ========
+
+    void datStore_latest_first_batch_all_false()
+    {
+        using namespace yapcr::bbs;
+        // 初回バッチ: 全件 latest=false（新着扱いしない）
+        QList<ResInfo> list;
+        for (int i = 0; i < 3; ++i) { list.append(makeRes()); }
+
+        DatStore store;
+        store.merge(list, BoardType::Jpnkn);
+        const QList<ResInfo> all = store.all();
+        for (const ResInfo& r : all) {
+            QVERIFY2(!r.latest, "初回バッチは latest=false");
+        }
+    }
+
+    void datStore_latest_second_batch_new_true()
+    {
+        using namespace yapcr::bbs;
+        // 2 回目 merge で追加された新規レスは latest=true
+        QList<ResInfo> first, second;
+        first.append(makeRes(QStringLiteral("res1")));
+        second = first;
+        second.append(makeRes(QStringLiteral("res2")));
+
+        DatStore store;
+        store.merge(first, BoardType::Jpnkn);
+
+        store.merge(second, BoardType::Jpnkn);
+        const QList<ResInfo> all = store.all();
+        QVERIFY2(!all[0].latest, "既存レスの latest は false に更新");
+        QVERIFY2( all[1].latest, "新規レスの latest は true");
+    }
+
+    // ======== DatStore — link 充填 ========
+
+    void datStore_link_filled()
+    {
+        using namespace yapcr::bbs;
+        // message に URL が含まれる → link に正規化済み URL が入る
+        QList<ResInfo> list;
+        list.append(makeRes(QStringLiteral("名無し"),
+                            QStringLiteral("見て ttp://example.com/page です")));
+
+        DatStore store;
+        store.merge(list, BoardType::Jpnkn);
+        const QList<ResInfo> all = store.all();
+        QCOMPARE(all.size(), 1);
+        QCOMPARE(all[0].link.size(), 1);
+        QCOMPARE(all[0].link[0], QStringLiteral("http://example.com/page"));
+    }
+
+    // ======== DatStore — ID 集計 ========
+
+    void datStore_id_count_increments()
+    {
+        using namespace yapcr::bbs;
+        // 同一 ID 3 レス → count: 1,2,3 / total: 3 / identifier: 同一連番
+        const QString sameId = QStringLiteral("Ab3kF9xZ");
+        QList<ResInfo> list;
+        for (int i = 0; i < 3; ++i) {
+            list.append(makeRes(QStringLiteral("名無し"), QString(), sameId));
+        }
+
+        DatStore store;
+        store.merge(list, BoardType::Jpnkn);
+        const QList<ResInfo> all = store.all();
+        QCOMPARE(all.size(), 3);
+        QCOMPARE(all[0].count, 1);
+        QCOMPARE(all[1].count, 2);
+        QCOMPARE(all[2].count, 3);
+        QCOMPARE(all[0].total, 3);
+        QCOMPARE(all[1].total, 3);
+        QCOMPARE(all[2].total, 3);
+        // 同一 ID は同一 identifier
+        QCOMPARE(all[0].identifier, all[1].identifier);
+        QCOMPARE(all[1].identifier, all[2].identifier);
+        QVERIFY2(all[0].identifier > 0, "identifier は 1 始まり");
+    }
+
+    void datStore_id_different_ids_different_identifiers()
+    {
+        using namespace yapcr::bbs;
+        // ID が異なれば identifier も異なる
+        QList<ResInfo> list;
+        list.append(makeRes(QStringLiteral("A"), QString(), QStringLiteral("Id111111")));
+        list.append(makeRes(QStringLiteral("B"), QString(), QStringLiteral("Id222222")));
+
+        DatStore store;
+        store.merge(list, BoardType::Jpnkn);
+        const QList<ResInfo> all = store.all();
+        QVERIFY2(all[0].identifier != all[1].identifier,
+                 "異なる ID には異なる identifier");
+    }
+
+    void datStore_id_question_marks_skipped()
+    {
+        using namespace yapcr::bbs;
+        // "???" 始まり ID はスキップ（count/identifier が付かない）
+        QList<ResInfo> list;
+        list.append(makeRes(QStringLiteral("名無し"), QString(),
+                            QStringLiteral("???xxxxx")));
+
+        DatStore store;
+        store.merge(list, BoardType::Jpnkn);
+        const QList<ResInfo> all = store.all();
+        QCOMPARE(all[0].count,      0);
+        QCOMPARE(all[0].total,      0);
+        QCOMPARE(all[0].identifier, 0);
+    }
+
+    // ======== DatStore — 被参照 ref ========
+
+    void datStore_ref_single_anchor()
+    {
+        using namespace yapcr::bbs;
+        // res3 が &gt;&gt;1 を含む → merge 後 res1.ref == [3]（第2パスで反映）
+        QList<ResInfo> list;
+        list.append(makeRes(QStringLiteral("res1")));                                // pos=1
+        list.append(makeRes(QStringLiteral("res2")));                                // pos=2
+        list.append(makeRes(QStringLiteral("res3"),
+                            QStringLiteral("&gt;&gt;1")));   // pos=3、res1 を参照
+
+        DatStore store;
+        store.merge(list, BoardType::Jpnkn);
+
+        // res1（byNumbers({1}) で取得）の ref に 3 が入っているか
+        const QList<ResInfo> res1 = store.byNumbers({1});
+        QCOMPARE(res1.size(), 1);
+        QVERIFY2(res1[0].ref.contains(3), "res1 は res3 に参照されている");
+    }
+
+    void datStore_ref_wide_anchor_ignored()
+    {
+        using namespace yapcr::bbs;
+        // &gt;&gt;1-100（span=99 > refRange=5）は ref に数えない
+        QList<ResInfo> list;
+        list.append(makeRes(QStringLiteral("res1")));
+        list.append(makeRes(QStringLiteral("res2"),
+                            QStringLiteral("&gt;&gt;1-100")));
+
+        DatStore store;
+        store.merge(list, BoardType::Jpnkn);
+
+        const QList<ResInfo> res1 = store.byNumbers({1});
+        QCOMPARE(res1.size(), 1);
+        QVERIFY2(res1[0].ref.isEmpty(),
+                 "広域アンカー（span > refRange）は ref に数えない");
+    }
+
+    void datStore_ref_narrow_range()
+    {
+        using namespace yapcr::bbs;
+        // &gt;&gt;1-3（span=2 <= refRange=5）は ref に入る
+        QList<ResInfo> list;
+        list.append(makeRes(QStringLiteral("res1")));
+        list.append(makeRes(QStringLiteral("res2"),
+                            QStringLiteral("&gt;&gt;1-3")));  // pos=2、1-3 を参照
+        list.append(makeRes(QStringLiteral("res3")));
+        list.append(makeRes(QStringLiteral("res4")));         // pos=4 は範囲外
+
+        DatStore store;
+        store.merge(list, BoardType::Jpnkn);
+
+        // res1, res2, res3 は ref に 2 が入る
+        QVERIFY(store.byNumbers({1})[0].ref.contains(2));
+        QVERIFY(store.byNumbers({2})[0].ref.contains(2));
+        QVERIFY(store.byNumbers({3})[0].ref.contains(2));
+        // res4 は範囲外
+        QVERIFY(!store.byNumbers({4})[0].ref.contains(2));
+    }
+
+    // ======== DatStore — reset ========
+
+    void datStore_reset()
+    {
+        using namespace yapcr::bbs;
+        QList<ResInfo> list;
+        list.append(makeRes());
+
+        DatStore store;
+        store.merge(list, BoardType::Jpnkn);
+        QCOMPARE(store.count(), 1);
+
+        store.reset();
+        QVERIFY2(store.isEmpty(), "reset 後は isEmpty()");
+        QCOMPARE(store.count(), 0);
+        QCOMPARE(store.all().size(), 0);
+    }
+
+    // ======== DatStore — extract クエリ ========
+
+    void datStore_byRange_basic()
+    {
+        using namespace yapcr::bbs;
+        QList<ResInfo> list;
+        for (int i = 0; i < 5; ++i) { list.append(makeRes(QStringLiteral("r%1").arg(i+1))); }
+
+        DatStore store;
+        store.merge(list, BoardType::Jpnkn);
+
+        // 2-4 範囲
+        const QList<ResInfo> sub = store.byRange({2, 4});
+        QCOMPARE(sub.size(), 3);
+        QCOMPARE(sub[0].name, QStringLiteral("r2"));
+        QCOMPARE(sub[2].name, QStringLiteral("r4"));
+    }
+
+    void datStore_byRange_swap()
+    {
+        using namespace yapcr::bbs;
+        QList<ResInfo> list;
+        for (int i = 0; i < 3; ++i) { list.append(makeRes()); }
+
+        DatStore store;
+        store.merge(list, BoardType::Jpnkn);
+
+        // first > last は自動 swap
+        const QList<ResInfo> r1 = store.byRange({3, 1});
+        const QList<ResInfo> r2 = store.byRange({1, 3});
+        QCOMPARE(r1.size(), 3);
+        QCOMPARE(r2.size(), 3);
+    }
+
+    void datStore_byRange_out_of_bounds()
+    {
+        using namespace yapcr::bbs;
+        QList<ResInfo> list;
+        list.append(makeRes());
+
+        DatStore store;
+        store.merge(list, BoardType::Jpnkn);
+
+        // 範囲外は空
+        QCOMPARE(store.byRange({5, 10}).size(), 0);
+        // 境界クランプ
+        QCOMPARE(store.byRange({1, 999}).size(), 1);
+    }
+
+    void datStore_byId_hit()
+    {
+        using namespace yapcr::bbs;
+        const QString id = QStringLiteral("MyTestId");
+        QList<ResInfo> list;
+        list.append(makeRes(QStringLiteral("A"), QString(), id));
+        list.append(makeRes(QStringLiteral("B")));
+        list.append(makeRes(QStringLiteral("C"), QString(), id));
+
+        DatStore store;
+        store.merge(list, BoardType::Jpnkn);
+
+        const QList<ResInfo> result = store.byId(id);
+        QCOMPARE(result.size(), 2);
+        QCOMPARE(result[0].name, QStringLiteral("A"));
+        QCOMPARE(result[1].name, QStringLiteral("C"));
+    }
+
+    void datStore_byId_miss()
+    {
+        using namespace yapcr::bbs;
+        QList<ResInfo> list;
+        list.append(makeRes());
+
+        DatStore store;
+        store.merge(list, BoardType::Jpnkn);
+
+        QCOMPARE(store.byId(QStringLiteral("nonexistent")).size(), 0);
+    }
+
+    void datStore_byRef_returns_referencing_posts()
+    {
+        using namespace yapcr::bbs;
+        // res2 が &gt;&gt;1 → byRef(1) は res2 を返す
+        QList<ResInfo> list;
+        list.append(makeRes(QStringLiteral("res1")));
+        list.append(makeRes(QStringLiteral("res2"),
+                            QStringLiteral("&gt;&gt;1")));
+
+        DatStore store;
+        store.merge(list, BoardType::Jpnkn);
+
+        const QList<ResInfo> result = store.byRef(1);
+        QCOMPARE(result.size(), 1);
+        QCOMPARE(result[0].name, QStringLiteral("res2"));
+    }
+
+    void datStore_byRef_no_refs()
+    {
+        using namespace yapcr::bbs;
+        QList<ResInfo> list;
+        list.append(makeRes());
+        list.append(makeRes());
+
+        DatStore store;
+        store.merge(list, BoardType::Jpnkn);
+
+        // 誰も参照していない → 空
+        QCOMPARE(store.byRef(1).size(), 0);
+    }
+
+    void datStore_byNumbers_basic()
+    {
+        using namespace yapcr::bbs;
+        QList<ResInfo> list;
+        for (int i = 1; i <= 5; ++i) {
+            list.append(makeRes(QStringLiteral("r%1").arg(i)));
+        }
+
+        DatStore store;
+        store.merge(list, BoardType::Jpnkn);
+
+        const QList<ResInfo> result = store.byNumbers({1, 3, 5});
+        QCOMPARE(result.size(), 3);
+        QCOMPARE(result[0].name, QStringLiteral("r1"));
+        QCOMPARE(result[1].name, QStringLiteral("r3"));
+        QCOMPARE(result[2].name, QStringLiteral("r5"));
+    }
+
+    void datStore_byNumbers_out_of_bounds_ignored()
+    {
+        using namespace yapcr::bbs;
+        QList<ResInfo> list;
+        list.append(makeRes());
+
+        DatStore store;
+        store.merge(list, BoardType::Jpnkn);
+
+        // 範囲外インデックスは無視
+        const QList<ResInfo> result = store.byNumbers({1, 999, 0, -1});
+        QCOMPARE(result.size(), 1);
+    }
+
+    // ======== DatStore — フィクスチャ統合 ========
+
+    void datStore_fixture_jpnkn()
+    {
+        using namespace yapcr::bbs;
+        const QString dir = QStringLiteral(BBS_FIXTURES_DIR);
+        QFile f(dir + QStringLiteral("/jpnkn/dat/1770907315.dat"));
+        if (!f.open(QIODevice::ReadOnly)) {
+            QSKIP("フィクスチャ jpnkn/dat/1770907315.dat が見つからない");
+        }
+        const QByteArray raw = f.readAll();
+
+        bool ok = false;
+        const QString text = decodeFrom(raw, Charset::ShiftJis, &ok);
+        QVERIFY2(ok, "Shift_JIS デコードエラー");
+
+        const QList<ResInfo> parsed = parseDat(text, BoardType::Jpnkn);
+        QCOMPARE(parsed.size(), 9);
+
+        DatStore store;
+        QCOMPARE(store.merge(parsed, BoardType::Jpnkn), 9);
+        QCOMPARE(store.count(), 9);
+
+        const QList<ResInfo> all = store.all();
+        QCOMPARE(all.size(), 9);
+
+        // 全件 number が "1".."9" の連番
+        for (int i = 0; i < all.size(); ++i) {
+            QCOMPARE(all[i].number, QString::number(i + 1));
+        }
+
+        // 1レス目: name/datetime/title が非空
+        QVERIFY2(!all[0].name.isEmpty(),     "name が空");
+        QVERIFY2(!all[0].datetime.isEmpty(), "datetime が空");
+        QVERIFY2(!all[0].title.isEmpty(),    "1レス目 title が空");
+    }
+
+    void datStore_fixture_shitaraba()
+    {
+        using namespace yapcr::bbs;
+        if (!isCharsetSupported(Charset::EucJp)) {
+            QSKIP("EUC-JP (CP51932) がこの環境では利用不可 — M3.8 で実機確認");
+        }
+        const QString dir = QStringLiteral(BBS_FIXTURES_DIR);
+        QFile f(dir + QStringLiteral("/shitaraba/dat/sample.dat"));
+        if (!f.open(QIODevice::ReadOnly)) {
+            QSKIP("フィクスチャ shitaraba/dat/sample.dat が見つからない");
+        }
+        const QByteArray raw = f.readAll();
+
+        bool ok = false;
+        const QString text = decodeFrom(raw, Charset::EucJp, &ok);
+        QVERIFY2(ok, "EUC-JP デコードエラー");
+
+        const QList<ResInfo> parsed = parseDat(text, BoardType::Shitaraba);
+        QVERIFY2(!parsed.isEmpty(), "したらば dat のパース結果が空");
+
+        DatStore store;
+        const int added = store.merge(parsed, BoardType::Shitaraba);
+        QCOMPARE(added, parsed.size());
+        QCOMPARE(store.count(), parsed.size());
+
+        // したらば: parseDat が number を付与済み → DatStore は上書きしない
+        const QList<ResInfo> all = store.all();
+        QVERIFY2(!all[0].number.isEmpty(), "したらば number が空");
+    }
+
+    // ======== BbsSession — init（同期パスのみ） ========
+
+    void bbsSession_init_valid_jpnkn()
+    {
+        using namespace yapcr::bbs;
+        BbsSession session;
+        const bool ok = session.init(
+            QStringLiteral("https://bbs.jpnkn.com/test/read.cgi/livegame/1770907315/"));
+        QVERIFY2(ok, "有効な jpnkn URL で init が false");
+        QVERIFY2(session.isValid(), "isValid() が false");
+        QCOMPARE(session.key(),       QStringLiteral("1770907315"));
+        QCOMPARE(session.boardTopUrl(),
+                 QStringLiteral("https://bbs.jpnkn.com/livegame/"));
+        QCOMPARE(session.threadTopUrl(),
+                 QStringLiteral("https://bbs.jpnkn.com/test/read.cgi/livegame/1770907315/"));
+    }
+
+    void bbsSession_init_valid_shitaraba()
+    {
+        using namespace yapcr::bbs;
+        BbsSession session;
+        const bool ok = session.init(
+            QStringLiteral("https://jbbs.shitaraba.net/bbs/read.cgi/anime/12345/1234567890/"));
+        QVERIFY2(ok, "有効な したらば URL で init が false");
+        QVERIFY2(session.isValid(), "isValid() が false");
+        QCOMPARE(session.key(), QStringLiteral("1234567890"));
+    }
+
+    void bbsSession_init_invalid_url()
+    {
+        using namespace yapcr::bbs;
+        BbsSession session;
+        const bool ok = session.init(QStringLiteral("not-a-valid-url"));
+        QVERIFY2(!ok, "無効 URL で init が true");
+        QVERIFY2(!session.isValid(), "無効 URL で isValid() が true");
+        QVERIFY2(session.key().isEmpty(), "無効 URL で key が非空");
+    }
+
+    void bbsSession_init_then_change()
+    {
+        using namespace yapcr::bbs;
+        BbsSession session;
+        session.init(
+            QStringLiteral("https://bbs.jpnkn.com/test/read.cgi/livegame/1770907315/"));
+
+        // 事前に dat を merge
+        QList<ResInfo> list;
+        list.append(makeRes());
+        session.store().count();  // store は const 参照アクセスのみ
+        // change でリセットされることを確認
+        const bool changed = session.change(QStringLiteral("9999999999"));
+        QVERIFY2(changed, "change が false");
+        QCOMPARE(session.key(), QStringLiteral("9999999999"));
     }
 };
 
