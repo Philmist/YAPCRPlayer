@@ -10,7 +10,8 @@
       "binaryDir": "${sourceDir}/build/msvc-ninja",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_PREFIX_PATH": "C:/Qt/6.11.1/msvc2022_64"
+        "CMAKE_PREFIX_PATH": "C:/Qt/6.11.1/msvc2022_64",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
     }
   ],

@@ -25,6 +25,7 @@ install_manifest.txt
 CTestTestfile.cmake
 _deps/
 Testing/
+compile_commands.json
 
 # ---- Qt（生成物・ユーザ状態） ----
 moc_*.cpp
