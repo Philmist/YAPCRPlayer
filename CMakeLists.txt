@@ -22,9 +22,8 @@ endif()
 
 # --- 依存 ---
 # M0 は Core/Gui/Widgets のみ。M1 で Network 追加。
-# Core5Compat（Shift-JIS/EUC-JP コーデック用）はこの Qt 6.11.1 ビルドに未同梱のため
-# charset.cpp では Windows API で代替している。
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network)
+# Core5Compat は M3(BBS) で Shift-JIS/EUC-JP 変換（QTextCodec）に使用。
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Core5Compat)
 qt_standard_project_setup()        # AUTOMOC/AUTOUIC/AUTORCC を有効化
 
 find_package(Mpv REQUIRED)

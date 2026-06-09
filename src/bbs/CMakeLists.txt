@@ -11,8 +11,6 @@ target_include_directories(bbs PUBLIC include)
 target_link_libraries(bbs
     PUBLIC  yapcr::common
             Qt6::Core
-    # Qt6::Core5Compat は Shift-JIS/EUC-JP の名前指定コーデックに使う予定だったが、
-    # この Qt 6.11.1 ビルドには Core5Compat が同梱されていないため Windows API で代替する。
-    # 将来 Core5Compat が利用可能になったときに charset.cpp を差し替える。
+            Qt6::Core5Compat   # QTextCodec（Shift-JIS/EUC-JP）
 )
 target_compile_features(bbs PUBLIC cxx_std_20)

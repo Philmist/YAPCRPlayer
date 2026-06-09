@@ -17,10 +17,8 @@ QByteArray encodeTo(const QString& s, Charset c);
 // 無効バイトがあっても黙置換した結果を返し、エラーは ok=false で通知する。
 QString decodeFrom(const QByteArray& bytes, Charset c, bool* ok = nullptr);
 
-// Charset に対応するコードページが実行環境で利用可能かを返す。
-// Windows では CP51932(EUC-JP) が IsValidCodePage=false になる環境があり、
-// その場合はしたらば(EUC-JP)の取得/デコードが動作しない。
-// false が返る場合は M3.8 の実機確認で対処が必要。
+// Charset に対応する QTextCodec が利用可能かを返す（Qt6 Core5Compat が必要）。
+// false が返る場合は Core5Compat が未リンク、またはコーデック名が未認識。
 bool isCharsetSupported(Charset c);
 
 }  // namespace yapcr::bbs
