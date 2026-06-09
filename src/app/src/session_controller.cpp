@@ -268,7 +268,10 @@ void SessionController::bbsRefresh()
         return;
     }
     emit statusMessage(tr("BBS を取得中..."));
+    // setting と dat を並行取得する。setting 失敗（404/403 等）があっても
+    // dat 取得・表示を止めないよう分離する。
     bbs_->loadSetting();
+    bbs_->loadDat();
 }
 
 void SessionController::bbsPost(const QString& message)
@@ -286,9 +289,8 @@ void SessionController::bbsPost(const QString& message)
 
 void SessionController::onBbsSettingLoaded()
 {
-    // setting 取得後に dat を取得する（subject はスレッド一覧 UI のない M3.6 では省略）。
-    // M3.8: bbs_->loadSubject() も呼びスレッド選択 UI に渡す。
-    bbs_->loadDat();
+    // setting は bbsRefresh() で dat と並行取得済み。ここでは dat を再呼びしない。
+    // M3.8: bbs_->loadSubject() を呼びスレッド選択 UI に渡す。
 }
 
 void SessionController::onBbsDatLoaded(int newCount, bool notModified)
