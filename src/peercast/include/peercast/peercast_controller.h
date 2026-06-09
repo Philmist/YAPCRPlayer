@@ -1,5 +1,6 @@
 #pragma once
 
+#include "net/http_message.h"
 #include "peercast/channel_info.h"
 
 #include <QElapsedTimer>
@@ -64,9 +65,9 @@ signals:
     void controlError(const QString& reason);
 
 private slots:
-    void onInfoFinished(const QByteArray& data, bool ok);
-    void onGuardBumpFinished(const QByteArray& data, bool ok);
-    void onGuardStopFinished(const QByteArray& data, bool ok);
+    void onInfoFinished(const yapcr::net::HttpResponse& resp);
+    void onGuardBumpFinished(const yapcr::net::HttpResponse& resp);
+    void onGuardStopFinished(const yapcr::net::HttpResponse& resp);
 
 private:
     QUrl adminUrl(const QString& cmd) const;  // ?cmd=<cmd>&id=<id>

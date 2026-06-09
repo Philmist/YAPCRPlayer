@@ -1,5 +1,7 @@
 #pragma once
 
+#include "net/http_message.h"
+
 #include <QObject>
 #include <QString>
 
@@ -34,7 +36,7 @@ signals:
     void failed();
 
 private slots:
-    void onHttpFinished(const QByteArray& data, bool ok);
+    void onHttpFinished(const yapcr::net::HttpResponse& resp);
 
 private:
     // プレイリスト本文から stream URL を抽出する。

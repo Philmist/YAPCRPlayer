@@ -18,13 +18,13 @@ void StreamResolver::resolve(const QString& plsUrl) {
     http_->get(QUrl(plsUrl));
 }
 
-void StreamResolver::onHttpFinished(const QByteArray& data, bool ok) {
-    if (!ok || data.isEmpty()) {
+void StreamResolver::onHttpFinished(const net::HttpResponse& resp) {
+    if (!resp.ok || resp.body.isEmpty()) {
         emit failed();
         return;
     }
 
-    const QString streamUrl = analyse(data);
+    const QString streamUrl = analyse(resp.body);
     if (streamUrl.isEmpty()) {
         emit failed();
         return;

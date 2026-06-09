@@ -111,12 +111,12 @@ void PeerCastController::issueStop() {
 
 // ---- slots ---------------------------------------------------------------
 
-void PeerCastController::onInfoFinished(const QByteArray& data, bool ok) {
-    if (!ok || data.isEmpty()) {
+void PeerCastController::onInfoFinished(const net::HttpResponse& resp) {
+    if (!resp.ok || resp.body.isEmpty()) {
         emit infoFailed();
         return;
     }
-    const ChannelInfo info = parseViewXml(data, id_);
+    const ChannelInfo info = parseViewXml(resp.body, id_);
     if (info.valid) {
         emit channelInfo(info);
     } else {
@@ -125,13 +125,13 @@ void PeerCastController::onInfoFinished(const QByteArray& data, bool ok) {
     }
 }
 
-void PeerCastController::onGuardBumpFinished(const QByteArray& data, bool ok) {
-    if (!ok || data.isEmpty()) {
+void PeerCastController::onGuardBumpFinished(const net::HttpResponse& resp) {
+    if (!resp.ok || resp.body.isEmpty()) {
         // viewxml 取得失敗 → ガードを通して bump する（PCRPlayer の挙動に準拠）
         issueBump();
         return;
     }
-    const ChannelInfo info = parseViewXml(data, id_);
+    const ChannelInfo info = parseViewXml(resp.body, id_);
     // relays > 0: 他にリレーしているノードがいる → bump を抑止
     // PCRPlayer check(relay) = info() && relays==0 に相当
     if (info.valid && info.relays > 0) {
@@ -142,12 +142,12 @@ void PeerCastController::onGuardBumpFinished(const QByteArray& data, bool ok) {
     issueBump();
 }
 
-void PeerCastController::onGuardStopFinished(const QByteArray& data, bool ok) {
-    if (!ok || data.isEmpty()) {
+void PeerCastController::onGuardStopFinished(const net::HttpResponse& resp) {
+    if (!resp.ok || resp.body.isEmpty()) {
         issueStop();
         return;
     }
-    const ChannelInfo info = parseViewXml(data, id_);
+    const ChannelInfo info = parseViewXml(resp.body, id_);
     if (info.valid && info.relays > 0) {
         emit controlError(
             tr("stop 抑止: 他リレーあり (relays=%1)").arg(info.relays));
