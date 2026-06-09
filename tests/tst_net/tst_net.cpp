@@ -28,13 +28,14 @@ private slots:
         QVERIFY(!headerValue(h, "user-agent").isEmpty());
     }
 
-    void buildHeaders_get_hasGzip() {
+    void buildHeaders_get_noAcceptEncoding() {
+        // Accept-Encoding は buildRequestHeaders では設定しない。
+        // QNAM が自動で付加し gzip 自動展開する（raw header で明示すると QNAM の自動展開が無効化される）。
         HttpRequest req;
         req.method = HttpMethod::Get;
         req.url    = QUrl("http://example.com/");
         const auto h = buildRequestHeaders(req);
-        const QByteArray ae = headerValue(h, "accept-encoding");
-        QVERIFY(ae.contains("gzip"));
+        QVERIFY(headerValue(h, "accept-encoding").isEmpty());
     }
 
     void buildHeaders_get_noContentType() {
@@ -55,20 +56,6 @@ private slots:
         const auto h = buildRequestHeaders(req);
         const QByteArray ct = headerValue(h, "content-type");
         QVERIFY(ct.contains("application/x-www-form-urlencoded"));
-    }
-
-    void buildHeaders_overrideGzip_empty() {
-        // Range 差分取得のため Accept-Encoding を空文字で無効化する（M3.3）
-        HttpRequest req;
-        req.method  = HttpMethod::Get;
-        req.url     = QUrl("http://example.com/dat");
-        req.headers = {{"Accept-Encoding", ""}};
-        const auto h = buildRequestHeaders(req);
-        // Accept-Encoding ヘッダ自体が存在しないこと
-        QVERIFY(headerValue(h, "accept-encoding").isEmpty());
-        for (const auto& [k, v] : h) {
-            QVERIFY(k.toLower() != "accept-encoding");
-        }
     }
 
     void buildHeaders_customHeaders_referer() {

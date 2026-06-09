@@ -1,4 +1,4 @@
-qt_add_executable(YAPCRPlayer WIN32
+qt_add_executable(YAPCRPlayer  # WIN32 一時的に無効（デバッグ用コンソール表示）
     src/main.cpp
     src/main_window.cpp
     src/main_window.h

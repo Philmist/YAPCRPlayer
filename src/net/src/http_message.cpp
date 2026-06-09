@@ -14,8 +14,10 @@ QList<QPair<QByteArray, QByteArray>> buildRequestHeaders(const HttpRequest& req)
         QByteArray value;
     };
     QList<DefaultEntry> defaults;
-    defaults.push_back(DefaultEntry{"user-agent",      QByteArray(kUserAgent)});
-    defaults.push_back(DefaultEntry{"accept-encoding", "gzip, deflate"});
+    defaults.push_back(DefaultEntry{"user-agent", QByteArray(kUserAgent)});
+    // accept-encoding は設定しない。QNAM が自動で付加し、gzip 展開も自動処理する。
+    // raw header で明示すると QNAM の自動展開が無効化されてしまうため。
+    // Range 差分取得（M3.x）では QNetworkRequest::AutoDecompressResponseBodyAttribute を使う。
     if (req.method == HttpMethod::Post) {
         defaults.push_back(DefaultEntry{"content-type", req.contentType});
     }

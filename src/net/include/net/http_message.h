@@ -47,9 +47,10 @@ struct HttpResponse {
 // ---- 純関数（単体テスト可） ----
 
 // HttpRequest からリクエストヘッダ一覧を組み立てる。
-// 既定値: User-Agent / Accept-Encoding: gzip, deflate / POST の Content-Type。
+// 既定値: User-Agent / POST の Content-Type。
+// Accept-Encoding は設定しない（QNAM が自動付加し gzip 自動展開する）。
 // req.headers にある同名キー（大文字小文字不問）は既定を上書きする。
-// req.headers に空値 ("") のキーを渡すと既定ヘッダを送信しない（gzip 無効化等に利用）。
+// req.headers に空値 ("") のキーを渡すと既定ヘッダを送信しない。
 //
 // ※ M5 で User-Agent を config 化する。// M5: config 化
 QList<QPair<QByteArray, QByteArray>> buildRequestHeaders(const HttpRequest& req);
