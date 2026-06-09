@@ -1,5 +1,7 @@
 #include <QTest>
 #include <QFile>
+#include <QNetworkCookie>
+#include <QSignalSpy>
 
 #include "bbs/bbs_session.h"
 #include "bbs/board_url.h"
@@ -8,6 +10,7 @@
 #include "bbs/dat_store.h"
 #include "bbs/extract.h"
 #include "bbs/models.h"
+#include "bbs/post.h"
 #include "bbs/setting.h"
 #include "bbs/subject.h"
 
@@ -1403,6 +1406,317 @@ private slots:
         const bool changed = session.change(QStringLiteral("9999999999"));
         QVERIFY2(changed, "change が false");
         QCOMPARE(session.key(), QStringLiteral("9999999999"));
+    }
+
+    // ======== BbsSession::post — 同期パス（key 未設定） ========
+
+    void bbsSession_post_no_key_emits_failed()
+    {
+        using namespace yapcr::bbs;
+        // init で board top URL（key なし）を渡すと key が空 → post() が即 postFailed
+        BbsSession session;
+        session.init(QStringLiteral("https://bbs.jpnkn.com/livegame/"));
+
+        QSignalSpy spy(&session, &BbsSession::postFailed);
+        session.post(QStringLiteral("名無し"), QStringLiteral("sage"),
+                     QStringLiteral("テスト書き込み"));
+        // postFailed は同期 emit（ネットワーク不要）
+        QCOMPARE(spy.count(), 1);
+        QVERIFY2(!spy.at(0).at(0).toString().isEmpty(), "reason が空");
+    }
+
+    void bbsSession_post_not_init_emits_failed()
+    {
+        using namespace yapcr::bbs;
+        // init を呼ばずに post → postFailed
+        BbsSession session;
+        QSignalSpy spy(&session, &BbsSession::postFailed);
+        session.post(QStringLiteral("名無し"), QStringLiteral(""), QStringLiteral("本文"));
+        QCOMPARE(spy.count(), 1);
+    }
+
+    // ======== halfWidthFold ========
+
+    void halfWidthFold_ascii_range()
+    {
+        using namespace yapcr::bbs;
+        // 全角 ASCII → 半角（U+FF01..FF5E → U+0021..7E）
+        QCOMPARE(halfWidthFold(QStringLiteral(u"ＡＢＣＤＥＦＧＨＩＪ")),
+                 QStringLiteral("ABCDEFGHIJ"));
+        QCOMPARE(halfWidthFold(QStringLiteral(u"ＥＲＲＯＲ")),
+                 QStringLiteral("ERROR"));
+        QCOMPARE(halfWidthFold(QStringLiteral(u"：")),
+                 QStringLiteral(":"));
+    }
+
+    void halfWidthFold_ideographic_space()
+    {
+        using namespace yapcr::bbs;
+        // 全角スペース（U+3000）→ 半角スペース
+        const QString input  = QString(QChar(0x3000));
+        const QString expect = QStringLiteral(" ");
+        QCOMPARE(halfWidthFold(input), expect);
+    }
+
+    void halfWidthFold_passthrough()
+    {
+        using namespace yapcr::bbs;
+        // 半角・ひらがな・CJK 漢字はそのまま
+        const QString s = QStringLiteral("ERROR: 利用認証が必要です。");
+        QCOMPARE(halfWidthFold(s), s);
+    }
+
+    // ======== postUrlEncode ========
+
+    void postUrlEncode_safe_chars()
+    {
+        using namespace yapcr::bbs;
+        // [0-9 a-z A-Z * - . _] は素通し
+        QCOMPARE(postUrlEncode(QStringLiteral("abc-123*._"), Charset::ShiftJis),
+                 QByteArray("abc-123*._"));
+    }
+
+    void postUrlEncode_space_is_percent20()
+    {
+        using namespace yapcr::bbs;
+        // 空白は %20（+ エンコード不使用）
+        QCOMPARE(postUrlEncode(QStringLiteral("a b"), Charset::ShiftJis),
+                 QByteArray("a%20b"));
+    }
+
+    void postUrlEncode_tilde_encoded()
+    {
+        using namespace yapcr::bbs;
+        // ~ は移植元では安全集合外 → %7E
+        QCOMPARE(postUrlEncode(QStringLiteral("a~b"), Charset::ShiftJis),
+                 QByteArray("a%7Eb"));
+    }
+
+    void postUrlEncode_shiftjis()
+    {
+        using namespace yapcr::bbs;
+        // 「書き込む」の Shift-JIS バイト列 → 全バイト %XX
+        // 8F 91 82 AB 8D 9E 82 DE
+        const QByteArray expected =
+            QByteArray("%8F%91%82%AB%8D%9E%82%DE");
+        QCOMPARE(postUrlEncode(QStringLiteral(u"書き込む"), Charset::ShiftJis),
+                 expected);
+    }
+
+    void postUrlEncode_eucjp()
+    {
+        using namespace yapcr::bbs;
+        if (!isCharsetSupported(Charset::EucJp)) {
+            QSKIP("EUC-JP がこの環境では利用不可 — M3.8 で実機確認");
+        }
+        // 「書き込む」の EUC-JP バイト列: BD F1 A4 AD B9 FE A4 E0
+        const QByteArray expected =
+            QByteArray("%BD%F1%A4%AD%B9%FE%A4%E0");
+        QCOMPARE(postUrlEncode(QStringLiteral(u"書き込む"), Charset::EucJp),
+                 expected);
+    }
+
+    // ======== buildPostBody ========
+
+    void buildPostBody_jpnkn_fields()
+    {
+        using namespace yapcr::bbs;
+        Board b = makeJpnknBoard(QStringLiteral("https"),
+                                 QStringLiteral("bbs.jpnkn.com"),
+                                 QStringLiteral("livegame"));
+        const QByteArray body = buildPostBody(b, QStringLiteral("1770907315"),
+                                              BoardType::Jpnkn,
+                                              QStringLiteral("テスト"),
+                                              QStringLiteral("sage"),
+                                              QStringLiteral("本文"),
+                                              1234567890LL);
+        // フィールド名と順序の確認
+        QVERIFY2(body.startsWith("submit="),  "submit= で始まる");
+        QVERIFY2(body.contains("&FROM="),     "&FROM= を含む");
+        QVERIFY2(body.contains("&mail="),     "&mail= を含む");
+        QVERIFY2(body.contains("&MESSAGE="),  "&MESSAGE= を含む");
+        QVERIFY2(body.contains("&bbs="),      "&bbs= を含む");
+        QVERIFY2(body.contains("&key="),      "&key= を含む");
+        QVERIFY2(body.contains("&time="),     "&time= を含む");
+        // したらば 固有フィールドは含まない
+        QVERIFY2(!body.contains("&NAME="),    "jpnkn に &NAME= は含まない");
+        QVERIFY2(!body.contains("&DIR="),     "jpnkn に &DIR= は含まない");
+        // time が注入値と一致
+        QVERIFY2(body.contains("&time=1234567890"), "time 値が一致");
+        // submit が「書き込む」の Shift-JIS urlencode
+        QVERIFY2(body.startsWith("submit=%8F%91%82%AB%8D%9E%82%DE"),
+                 "submit 値が Shift-JIS の「書き込む」");
+        // bbs フィールドに board 値
+        QVERIFY2(body.contains("&bbs=livegame"), "&bbs=livegame を含む");
+        // key フィールド
+        QVERIFY2(body.contains("&key=1770907315"), "&key=1770907315 を含む");
+    }
+
+    void buildPostBody_shitaraba_fields()
+    {
+        using namespace yapcr::bbs;
+        if (!isCharsetSupported(Charset::EucJp)) {
+            QSKIP("EUC-JP がこの環境では利用不可 — M3.8 で実機確認");
+        }
+        Board b = makeShitarabaBoard(QStringLiteral("https"),
+                                     QStringLiteral("jbbs.shitaraba.net"),
+                                     QStringLiteral("anime"),
+                                     QStringLiteral("12345"));
+        const QByteArray body = buildPostBody(b, QStringLiteral("9876543210"),
+                                              BoardType::Shitaraba,
+                                              QStringLiteral("テスト"),
+                                              QStringLiteral(""),
+                                              QStringLiteral("本文"),
+                                              9999999999LL);
+        QVERIFY2(body.startsWith("submit="),  "submit= で始まる");
+        QVERIFY2(body.contains("&NAME="),     "&NAME= を含む");
+        QVERIFY2(body.contains("&MAIL="),     "&MAIL= を含む");
+        QVERIFY2(body.contains("&MESSAGE="),  "&MESSAGE= を含む");
+        QVERIFY2(body.contains("&DIR="),      "&DIR= を含む");
+        QVERIFY2(body.contains("&BBS="),      "&BBS= を含む");
+        QVERIFY2(body.contains("&KEY="),      "&KEY= を含む");
+        QVERIFY2(body.contains("&TIME="),     "&TIME= を含む");
+        // jpnkn 固有フィールドは含まない
+        QVERIFY2(!body.contains("&FROM="),    "したらば に &FROM= は含まない");
+        QVERIFY2(!body.contains("&bbs="),     "したらば に &bbs= は含まない");
+        // DIR/BBS/KEY
+        QVERIFY2(body.contains("&DIR=anime"),      "&DIR=anime を含む");
+        QVERIFY2(body.contains("&BBS=12345"),      "&BBS=12345 を含む");
+        QVERIFY2(body.contains("&KEY=9876543210"), "&KEY=9876543210 を含む");
+        QVERIFY2(body.contains("&TIME=9999999999"), "&TIME 値が一致");
+    }
+
+    // ======== buildCookieHeader ========
+
+    void buildCookieHeader_basic()
+    {
+        using namespace yapcr::bbs;
+        const QByteArray cookie = buildCookieHeader(
+            QStringLiteral("名無し"), QStringLiteral("sage"), Charset::ShiftJis);
+        QVERIFY2(cookie.startsWith("NAME="),      "NAME= で始まる");
+        QVERIFY2(cookie.contains("; MAIL="),      "; MAIL= を含む");
+        // 末尾が MAIL=<value> で終わる（extra なし）
+        QVERIFY2(!cookie.contains("; PON="),      "extra なしなので ; PON= は含まない");
+    }
+
+    void buildCookieHeader_extra_cookies()
+    {
+        using namespace yapcr::bbs;
+        QList<QNetworkCookie> extra;
+        extra.append(QNetworkCookie("PON", "example.com"));
+        extra.append(QNetworkCookie("yuki", "akari"));
+
+        const QByteArray cookie = buildCookieHeader(
+            QStringLiteral(""), QStringLiteral(""), Charset::ShiftJis, extra);
+        QVERIFY2(cookie.contains("; PON=example.com"),  "; PON=example.com を含む");
+        QVERIFY2(cookie.contains("; yuki=akari"),       "; yuki=akari を含む");
+    }
+
+    // ======== classifyWriteResponse ========
+
+    void classify_2chx_cookie()
+    {
+        using namespace yapcr::bbs;
+        const QString html = QStringLiteral(
+            "<html><body><!-- 2ch_X:cookie --></body></html>");
+        const auto cls = classifyWriteResponse(html);
+        QCOMPARE(cls.result, WriteResult::NeedCookie);
+    }
+
+    void classify_2chx_error()
+    {
+        using namespace yapcr::bbs;
+        const QString html = QStringLiteral(
+            "<html><body><!-- 2ch_X:error --></body></html>");
+        const auto cls = classifyWriteResponse(html);
+        QCOMPARE(cls.result, WriteResult::Error);
+    }
+
+    void classify_title_error()
+    {
+        using namespace yapcr::bbs;
+        const QString html = QStringLiteral(
+            "<html><head><title>ERROR</title></head></html>");
+        const auto cls = classifyWriteResponse(html);
+        QCOMPARE(cls.result, WriteResult::Error);
+    }
+
+    void classify_title_angel()
+    {
+        using namespace yapcr::bbs;
+        const QString html = QStringLiteral(
+            "<html><head><title>You just summoned a Ruthless Angel.</title></head></html>");
+        const auto cls = classifyWriteResponse(html);
+        QCOMPARE(cls.result, WriteResult::Error);
+    }
+
+    void classify_jpnkn_auth_error()
+    {
+        using namespace yapcr::bbs;
+        // jpnkn 全角 ERROR + 認証要求（title 外の本文）
+        const QString html = QStringLiteral(
+            "<html><body>ＥＲＲＯＲ：この掲示板では利用認証が必要です。"
+            "https://edge.jpnkn.com/auth.php?code=XXXX</body></html>");
+        const auto cls = classifyWriteResponse(html);
+        QCOMPARE(cls.result, WriteResult::Error);
+    }
+
+    void classify_jpnkn_cookie_burnt()
+    {
+        using namespace yapcr::bbs;
+        // jpnkn COOKIE got burnt（半角）
+        const QString html = QStringLiteral(
+            "<html><body>ＥＲＲＯＲ：The COOKIE got burnt!</body></html>");
+        const auto cls = classifyWriteResponse(html);
+        QCOMPARE(cls.result, WriteResult::Error);
+    }
+
+    void classify_ok()
+    {
+        using namespace yapcr::bbs;
+        // 書き込み成功ページ（エラー要素なし）
+        const QString html = QStringLiteral(
+            "<html><head><title>書き込み完了</title></head>"
+            "<body>書き込みが完了しました。</body></html>");
+        const auto cls = classifyWriteResponse(html);
+        QCOMPARE(cls.result, WriteResult::Ok);
+    }
+
+    // ======== nextPostAction ========
+
+    void nextPostAction_ok_succeeds()
+    {
+        using namespace yapcr::bbs;
+        QCOMPARE(nextPostAction(WriteResult::Ok, 0, false), PostAction::Succeed);
+        QCOMPARE(nextPostAction(WriteResult::Ok, 0, true),  PostAction::Succeed);
+        QCOMPARE(nextPostAction(WriteResult::Ok, 1, true),  PostAction::Succeed);
+    }
+
+    void nextPostAction_need_cookie_first_with_cookie_resends()
+    {
+        using namespace yapcr::bbs;
+        QCOMPARE(nextPostAction(WriteResult::NeedCookie, 0, true), PostAction::Resend);
+    }
+
+    void nextPostAction_need_cookie_no_new_cookie_fails()
+    {
+        using namespace yapcr::bbs;
+        // 確認ページだが Set-Cookie なし → 再送材料がないので失敗
+        QCOMPARE(nextPostAction(WriteResult::NeedCookie, 0, false), PostAction::Fail);
+    }
+
+    void nextPostAction_need_cookie_second_attempt_fails()
+    {
+        using namespace yapcr::bbs;
+        // 2 回目の確認ページ（再送後また確認）→ 無限ループ防止で失敗
+        QCOMPARE(nextPostAction(WriteResult::NeedCookie, 1, true), PostAction::Fail);
+    }
+
+    void nextPostAction_error_fails()
+    {
+        using namespace yapcr::bbs;
+        QCOMPARE(nextPostAction(WriteResult::Error, 0, false), PostAction::Fail);
+        QCOMPARE(nextPostAction(WriteResult::Error, 0, true),  PostAction::Fail);
     }
 };
 

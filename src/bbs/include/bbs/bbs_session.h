@@ -3,6 +3,7 @@
 #include "bbs/board_url.h"
 #include "bbs/dat_store.h"
 #include "bbs/models.h"
+#include "bbs/post.h"
 #include "net/http_message.h"
 
 #include <QList>
@@ -83,6 +84,14 @@ public:
     bool    isStop()      const;   // store_.count() >= loc_.thread.stop
     bool    isValid()     const;   // init 済みかつ URL 解析成功
 
+    // ---- 書き込み（非同期 POST）----
+
+    // 書き込みリクエストを発行する。2ch 互換掲示板では確認ページが返る場合があり、
+    // その際は Cookie を受領して自動的に再送する（高々 1 回）。
+    // 完了時に postSucceeded() または postFailed(reason) を emit する。
+    // 移植元: BaseBBS::post()@337
+    void post(const QString& name, const QString& mail, const QString& message);
+
 signals:
     void settingLoaded();
     void subjectLoaded(const QList<yapcr::bbs::ThreadInfo>& threads);
@@ -90,11 +99,16 @@ signals:
     void datLoaded(int newCount, bool notModified);
     // phase: どの fetch が失敗したか / reason: HTTP ステータス等の説明
     void loadFailed(yapcr::bbs::BbsPhase phase, const QString& reason);
+    // 書き込み成功
+    void postSucceeded();
+    // 書き込み失敗。reason: classifyWriteResponse の message またはネットワークエラー
+    void postFailed(const QString& reason);
 
 private slots:
     void onSettingFinished(const yapcr::net::HttpResponse& resp);
     void onSubjectFinished(const yapcr::net::HttpResponse& resp);
     void onDatFinished(const yapcr::net::HttpResponse& resp);
+    void onPostFinished(const yapcr::net::HttpResponse& resp);
 
 private:
     BoardLocation     loc_;
@@ -106,6 +120,17 @@ private:
     net::HttpClient*  settingClient_;
     net::HttpClient*  subjectClient_;
     net::HttpClient*  datClient_;
+    net::HttpClient*  postClient_;   // M3.5: 書き込み用（再送で同一インスタンス再利用）
+
+    // 書き込み中間状態（1 回目→再送で保持）
+    QString pendingName_;
+    QString pendingMail_;
+    QString pendingMessage_;
+    qint64  pendingTime_{0};     // 1 回目で確定し再送でも同一 time を使う
+    int     postAttempt_{0};
+
+    // 内部: POST を実際に発行するヘルパー。extraCookies は再送時に渡す Set-Cookie
+    void sendPost_(const QList<QNetworkCookie>& extraCookies = {});
 };
 
 }  // namespace yapcr::bbs

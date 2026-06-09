@@ -6,6 +6,7 @@ add_library(bbs STATIC
     src/dat.cpp
     src/extract.cpp
     src/dat_store.cpp
+    src/post.cpp
     src/bbs_session.cpp
     include/bbs/models.h
     include/bbs/charset.h
@@ -15,6 +16,7 @@ add_library(bbs STATIC
     include/bbs/dat.h
     include/bbs/extract.h
     include/bbs/dat_store.h
+    include/bbs/post.h
     include/bbs/bbs_session.h
 )
 add_library(yapcr::bbs ALIAS bbs)

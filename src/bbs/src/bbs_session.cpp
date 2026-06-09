@@ -3,11 +3,13 @@
 #include "bbs/board_url.h"
 #include "bbs/charset.h"
 #include "bbs/dat.h"
+#include "bbs/post.h"
 #include "bbs/setting.h"
 #include "bbs/subject.h"
 #include "net/http_client.h"
 #include "net/http_message.h"
 
+#include <QDateTime>
 #include <QUrl>
 
 namespace yapcr::bbs {
@@ -30,6 +32,7 @@ BbsSession::BbsSession(QObject* parent)
     , settingClient_(new net::HttpClient(this))
     , subjectClient_(new net::HttpClient(this))
     , datClient_    (new net::HttpClient(this))
+    , postClient_   (new net::HttpClient(this))
 {
     connect(settingClient_, &net::HttpClient::finished,
             this, &BbsSession::onSettingFinished);
@@ -37,6 +40,8 @@ BbsSession::BbsSession(QObject* parent)
             this, &BbsSession::onSubjectFinished);
     connect(datClient_,     &net::HttpClient::finished,
             this, &BbsSession::onDatFinished);
+    connect(postClient_,    &net::HttpClient::finished,
+            this, &BbsSession::onPostFinished);
 }
 
 BbsSession::~BbsSession() = default;
@@ -187,5 +192,64 @@ int     BbsSession::stop()        const { return loc_.thread.stop; }
 int     BbsSession::count()       const { return store_.count(); }
 bool    BbsSession::isStop()      const { return store_.count() >= loc_.thread.stop; }
 bool    BbsSession::isValid()     const { return loc_.valid; }
+
+// ---------- 書き込み（M3.5） ----------
+
+void BbsSession::post(const QString& name, const QString& mail, const QString& message)
+{
+    if (!loc_.valid || loc_.thread.key.isEmpty()) {
+        emit postFailed(QStringLiteral("スレッドキーが未設定です"));
+        return;
+    }
+    pendingName_    = name;
+    pendingMail_    = mail;
+    pendingMessage_ = message;
+    pendingTime_    = QDateTime::currentSecsSinceEpoch();
+    postAttempt_    = 0;
+    sendPost_();
+}
+
+void BbsSession::sendPost_(const QList<QNetworkCookie>& extraCookies)
+{
+    const QByteArray body    = buildPostBody(loc_.board, loc_.thread.key, loc_.type,
+                                             pendingName_, pendingMail_, pendingMessage_,
+                                             pendingTime_);
+    const QByteArray cookie  = buildCookieHeader(pendingName_, pendingMail_,
+                                                 loc_.board.code, extraCookies);
+    const QByteArray referer = detail::mkThreadUrl(loc_.board, loc_.thread.key, loc_.type)
+                               .toUtf8();
+
+    postClient_->post(
+        QUrl(writeUrl(loc_.board, loc_.type)),
+        body,
+        {{QByteArrayLiteral("Referer"), referer},
+         {QByteArrayLiteral("Cookie"),  cookie}});
+}
+
+void BbsSession::onPostFinished(const net::HttpResponse& resp)
+{
+    if (!resp.ok) {
+        emit postFailed(QStringLiteral("ネットワークエラー"));
+        return;
+    }
+    const QString html = decodeFrom(resp.body, loc_.board.code);
+    const WriteClassification cls = classifyWriteResponse(html);
+    const PostAction action = nextPostAction(cls.result, postAttempt_,
+                                             !resp.setCookies.isEmpty());
+    switch (action) {
+    case PostAction::Succeed:
+        emit postSucceeded();
+        break;
+    case PostAction::Resend:
+        ++postAttempt_;
+        sendPost_(resp.setCookies);
+        break;
+    case PostAction::Fail:
+        emit postFailed(cls.message.isEmpty()
+                        ? QStringLiteral("書き込みエラー")
+                        : cls.message);
+        break;
+    }
+}
 
 }  // namespace yapcr::bbs
