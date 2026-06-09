@@ -3,6 +3,7 @@
 #include <QMainWindow>
 
 class QAction;
+class QDockWidget;
 
 namespace yapcr::player {
 class MpvBackend;
@@ -12,6 +13,8 @@ namespace yapcr::app {
 
 class VideoHostWidget;
 class SessionController;
+class ResListPane;
+class ResInputBar;
 
 // アプリケーションのメインウィンドウ。
 //
@@ -58,6 +61,13 @@ private:
     QAction* actBump_{nullptr};
     QAction* actStop_{nullptr};
     QAction* actReload_{nullptr};
+
+    // M3.6: BBS ペイン・入力バー・ドック
+    ResListPane*  resListPane_{nullptr};
+    ResInputBar*  resInputBar_{nullptr};
+    QDockWidget*  resDock_{nullptr};
+    QDockWidget*  inputDock_{nullptr};
+    QAction*      actBbsRefresh_{nullptr};
 
     // openMedia が attach より先に呼ばれた場合に備えて引数を保持する
     struct PendingMedia {

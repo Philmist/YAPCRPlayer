@@ -16,7 +16,15 @@ namespace yapcr::app {
 SessionController::SessionController(player::MpvBackend* backend, QObject* parent)
     : QObject(parent)
     , backend_(backend)
-{}
+{
+    // BBS セッション（M3.6）: 一度生成し bbsRefresh() で再 init する
+    bbs_ = new bbs::BbsSession(this);
+    connect(bbs_, &bbs::BbsSession::settingLoaded, this, &SessionController::onBbsSettingLoaded);
+    connect(bbs_, &bbs::BbsSession::datLoaded,     this, &SessionController::onBbsDatLoaded);
+    connect(bbs_, &bbs::BbsSession::postSucceeded, this, &SessionController::onBbsPostSucceeded);
+    connect(bbs_, &bbs::BbsSession::postFailed,    this, &SessionController::onBbsPostFailed);
+    connect(bbs_, &bbs::BbsSession::loadFailed,    this, &SessionController::onBbsLoadFailed);
+}
 
 SessionController::~SessionController() = default;
 
@@ -245,6 +253,78 @@ void SessionController::onBumpRequested() {
 
 void SessionController::onSupplyLost() {
     emit statusMessage(tr("供給が回復しません。手動で操作してください。"));
+}
+
+// ---- BBS 操作スロット（M3.6）-----------------------------------------------
+
+void SessionController::bbsRefresh()
+{
+    if (contact_.isEmpty()) {
+        emit statusMessage(tr("掲示板 URL が設定されていません"));
+        return;
+    }
+    if (!bbs_->init(contact_)) {
+        emit statusMessage(tr("掲示板 URL の解析に失敗しました: %1").arg(contact_));
+        return;
+    }
+    emit statusMessage(tr("BBS を取得中..."));
+    bbs_->loadSetting();
+}
+
+void SessionController::bbsPost(const QString& message)
+{
+    if (!bbs_->isValid()) {
+        emit statusMessage(tr("BBS が初期化されていません（先に「BBS取得/更新」を実行してください）"));
+        emit bbsPostFinished(false);
+        return;
+    }
+    // 名前/メールは空（最小構成）。M3.8 で名前/メール入力欄を追加予定。
+    bbs_->post(QString{}, QString{}, message);
+}
+
+// ---- BBS シグナル受信スロット（M3.6）----------------------------------------
+
+void SessionController::onBbsSettingLoaded()
+{
+    // setting 取得後に dat を取得する（subject はスレッド一覧 UI のない M3.6 では省略）。
+    // M3.8: bbs_->loadSubject() も呼びスレッド選択 UI に渡す。
+    bbs_->loadDat();
+}
+
+void SessionController::onBbsDatLoaded(int newCount, bool notModified)
+{
+    Q_UNUSED(notModified);
+    if (newCount > 0) {
+        emit statusMessage(tr("BBS 更新: +%1 件").arg(newCount));
+    } else {
+        emit statusMessage(tr("BBS: 新着なし"));
+    }
+    emit bbsResAppended(bbs_->dat());
+}
+
+void SessionController::onBbsPostSucceeded()
+{
+    emit statusMessage(tr("書き込み成功"));
+    emit bbsPostFinished(true);
+}
+
+void SessionController::onBbsPostFailed(const QString& reason)
+{
+    emit statusMessage(tr("書き込み失敗: %1").arg(reason));
+    emit bbsPostFinished(false);
+}
+
+void SessionController::onBbsLoadFailed(bbs::BbsPhase phase, const QString& reason)
+{
+    const QString phaseStr = [phase]() -> QString {
+        switch (phase) {
+        case bbs::BbsPhase::Setting: return QStringLiteral("setting");
+        case bbs::BbsPhase::Subject: return QStringLiteral("subject");
+        case bbs::BbsPhase::Dat:     return QStringLiteral("dat");
+        }
+        return QStringLiteral("unknown");
+    }();
+    emit statusMessage(tr("BBS 取得エラー [%1]: %2").arg(phaseStr, reason));
 }
 
 }  // namespace yapcr::app

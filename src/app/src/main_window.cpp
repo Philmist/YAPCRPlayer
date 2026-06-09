@@ -2,11 +2,14 @@
 
 #include "video_host_widget.h"
 #include "session_controller.h"
+#include "res_list_pane.h"   // bbs/models.h を推移的に含む（yapcr::bbs::ResInfo）
+#include "res_input_bar.h"
 #include "player/mpv_backend.h"
 #include "common/version.h"
 
 #include <QAction>
 #include <QDebug>
+#include <QDockWidget>
 #include <QMenu>
 #include <QMenuBar>
 #include <QShowEvent>
@@ -51,6 +54,44 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     connect(session_, &SessionController::statusMessage,
             this,     &MainWindow::onStatusMessage);
 
+    // M3.6: BBS レス一覧ペイン（右ドック、初期は非表示）
+    resListPane_ = new ResListPane(this);
+    resDock_ = new QDockWidget(tr("BBS レス一覧"), this);
+    resDock_->setObjectName(QStringLiteral("resDock"));
+    resDock_->setWidget(resListPane_);
+    addDockWidget(Qt::RightDockWidgetArea, resDock_);
+    resDock_->hide();
+
+    // M3.6: BBS レス入力バー（下部ドック、初期は非表示）
+    resInputBar_ = new ResInputBar(this);
+    inputDock_ = new QDockWidget(tr("BBS 書き込み"), this);
+    inputDock_->setObjectName(QStringLiteral("inputDock"));
+    inputDock_->setWidget(resInputBar_);
+    addDockWidget(Qt::BottomDockWidgetArea, inputDock_);
+    inputDock_->hide();
+
+    // M3.6: BBS シグナル配線
+    connect(session_, &SessionController::bbsResAppended,
+            this, [this](const QList<yapcr::bbs::ResInfo>& resList) {
+                resListPane_->appendResList(resList);
+                // BBS データが届いたらドックを自動表示（初回のみ）
+                if (!resList.isEmpty()) {
+                    resDock_->show();
+                    inputDock_->show();
+                }
+            });
+    connect(session_, &SessionController::bbsPostFinished,
+            this, [this](bool ok) {
+                resInputBar_->setInputEnabled(true);
+                if (ok) { resInputBar_->clearInput(); }
+            });
+    // 送信時に入力欄を無効化してから SessionController に渡す
+    connect(resInputBar_, &ResInputBar::postRequested,
+            this, [this](const QString& msg) {
+                resInputBar_->setInputEnabled(false);
+                session_->bbsPost(msg);
+            });
+
     // M2: 最小メニューバー（再接続/切断/再読込）
     {
         QMenu* menu = menuBar()->addMenu(tr("操作(&O)"));
@@ -63,6 +104,21 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
         connect(actBump_,   &QAction::triggered, session_, &SessionController::manualBump);
         connect(actStop_,   &QAction::triggered, session_, &SessionController::manualStop);
         connect(actReload_, &QAction::triggered, session_, &SessionController::manualReload);
+
+        // M3.6: BBS 取得/更新・ドック表示切替
+        menu->addSeparator();
+        actBbsRefresh_ = menu->addAction(tr("BBS 取得/更新 (&G)"));
+        connect(actBbsRefresh_, &QAction::triggered, this, [this] {
+            resListPane_->clearRes();
+            session_->bbsRefresh();
+        });
+        menu->addSeparator();
+        QAction* toggleResDock   = resDock_->toggleViewAction();
+        QAction* toggleInputDock = inputDock_->toggleViewAction();
+        toggleResDock->setText(tr("レス一覧 (&L) 表示切替"));
+        toggleInputDock->setText(tr("書き込み欄 (&W) 表示切替"));
+        menu->addAction(toggleResDock);
+        menu->addAction(toggleInputDock);
     }
 
     // ウィンドウタイトルの初期値

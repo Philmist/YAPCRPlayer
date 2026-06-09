@@ -1,5 +1,8 @@
 #pragma once
 
+#include "bbs/bbs_session.h"  // BbsSession, BbsPhase, ResInfo（yapcr::bbs）
+
+#include <QList>
 #include <QObject>
 #include <QString>
 
@@ -41,6 +44,17 @@ public:
                const QString& contact    = {},
                bool           commandline = false);
 
+    // ---- BBS 操作（M3.6） -----
+
+    // contact URL で BbsSession を init し、setting→dat を1回フェッチする。
+    // 重複呼び出し時は BbsSession をリセットして再取得する。
+    // M3.8: ポーリングタイマ・commandline && contact 自動起動はここに後付けする。
+    Q_INVOKABLE void bbsRefresh();
+
+    // BBS に書き込む（名前/メールは空、本文のみの最小構成）。
+    // 書き込み中は bbsPostFinished が emit されるまで再呼び出し不可（UI 側が無効化する）。
+    Q_INVOKABLE void bbsPost(const QString& message);
+
     QString currentPath()    const { return path_; }
     QString currentName()    const { return name_; }
     QString currentContact() const { return contact_; }
@@ -59,6 +73,12 @@ signals:
     // ステータスバーへのメッセージ。
     void statusMessage(const QString& msg);
 
+    // BBS dat が更新された。resList は全レス（差分追記は ResListPane 側で管理）。
+    void bbsResAppended(const QList<yapcr::bbs::ResInfo>& resList);
+
+    // 書き込み結果。ok=true: 成功（入力欄をクリアする）、false: 失敗。
+    void bbsPostFinished(bool ok);
+
 private slots:
     void onStreamResolved(const QString& streamUrl);
     void onStreamFailed();
@@ -70,6 +90,13 @@ private slots:
     void onReloadRequested();
     void onBumpRequested();
     void onSupplyLost();
+
+    // BBS シグナル受信スロット（M3.6）
+    void onBbsSettingLoaded();
+    void onBbsDatLoaded(int newCount, bool notModified);
+    void onBbsPostSucceeded();
+    void onBbsPostFailed(const QString& reason);
+    void onBbsLoadFailed(yapcr::bbs::BbsPhase phase, const QString& reason);
 
 private:
     // PeerCast セッションのセットアップ（PeerCastController + Watchdog + タイマ生成）
@@ -97,6 +124,9 @@ private:
 
     QString plsUrl_;     // /pls/ URL（PeerCast セッションのとき設定）
     QString streamUrl_;  // /stream/ URL（解決後）
+
+    // BBS セッション（M3.6: 一度生成し init()/loadSetting()/loadDat() を繰り返す）
+    bbs::BbsSession* bbs_{nullptr};
 };
 
 }  // namespace yapcr::app
