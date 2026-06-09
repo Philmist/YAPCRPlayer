@@ -31,6 +31,8 @@
 *.vcxproj.filters text eol=crlf
 
 # ---- バイナリ（差分・正規化を無効化） ----
+# BBS テストフィクスチャ: Shift_JIS / EUC-JP バイナリは text=auto で破損するため除外
+tests/fixtures/bbs/**/*.dat  binary
 *.dll   binary
 *.lib   binary
 *.exe   binary

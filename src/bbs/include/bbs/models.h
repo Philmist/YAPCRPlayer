@@ -3,8 +3,22 @@
 #include <QString>
 #include <QList>
 #include <QPair>
+#include <cstdlib>  // std::abs
 
 namespace yapcr::bbs {
+
+// アンカー範囲（移植元: BBSRegex.h:8-16 の Range）
+// first と last を含む閉区間。単一レス参照は first == last。
+struct Range {
+    int first{0};
+    int last{0};
+
+    // 範囲の幅（移植元 range() は型名と紛れるため span() に改名）
+    int  span()        const { return std::abs(first - last); }
+    // v が範囲内かを返す
+    bool within(int v) const { return v >= first && v <= last; }
+};
+
 
 // 文字コード（移植元: Mlang::CODE）
 enum class Charset {

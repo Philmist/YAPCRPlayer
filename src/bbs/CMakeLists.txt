@@ -3,11 +3,15 @@ add_library(bbs STATIC
     src/board_url.cpp
     src/setting.cpp
     src/subject.cpp
+    src/dat.cpp
+    src/extract.cpp
     include/bbs/models.h
     include/bbs/charset.h
     include/bbs/board_url.h
     include/bbs/setting.h
     include/bbs/subject.h
+    include/bbs/dat.h
+    include/bbs/extract.h
 )
 add_library(yapcr::bbs ALIAS bbs)
 

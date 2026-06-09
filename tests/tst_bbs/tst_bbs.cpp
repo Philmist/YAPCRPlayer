@@ -3,6 +3,8 @@
 
 #include "bbs/board_url.h"
 #include "bbs/charset.h"
+#include "bbs/dat.h"
+#include "bbs/extract.h"
 #include "bbs/models.h"
 #include "bbs/setting.h"
 #include "bbs/subject.h"
@@ -516,6 +518,332 @@ private slots:
         QVERIFY2(!info.title.isEmpty(),  "BBS_TITLE が空");
         QVERIFY2(!info.noname.isEmpty(), "BBS_NONAME_NAME が空");
         QCOMPARE(info.stop, 1000);
+    }
+
+    // ======== parseDat — jpnkn ========
+
+    void parseDat_jpnkn_single()
+    {
+        using namespace yapcr::bbs;
+        // >>1 は title あり、その後 empty
+        const QString text =
+            QStringLiteral("名無し<>sage<>2026/02/12(木) 23:41:56.06<>テスト本文<br>2行目<>テストスレ\n");
+        const QList<ResInfo> list = parseDat(text, BoardType::Jpnkn);
+        QCOMPARE(list.size(), 1);
+        QCOMPARE(list[0].name,    QStringLiteral("名無し"));
+        QCOMPARE(list[0].mail,    QStringLiteral("sage"));
+        QCOMPARE(list[0].message, QStringLiteral("テスト本文<br>2行目"));  // <br> は残置
+        QCOMPARE(list[0].title,   QStringLiteral("テストスレ"));
+        QVERIFY2(list[0].number.isEmpty(), "jpnkn number は M3.4 が付与（M3.3 では空）");
+    }
+
+    void parseDat_jpnkn_multi()
+    {
+        using namespace yapcr::bbs;
+        // 複数レス、2レス目以降は title 空
+        const QString text =
+            QStringLiteral("名無し<>sage<>2026/02/12(木) 23:41:56.06<>最初のレス<>スレタイ\n")
+            + QStringLiteral("ふぃるみすと<>age<>2026/02/12(木) 23:45:00.00<>2番目のレス<>\n");
+        const QList<ResInfo> list = parseDat(text, BoardType::Jpnkn);
+        QCOMPARE(list.size(), 2);
+        QCOMPARE(list[0].title, QStringLiteral("スレタイ"));
+        QVERIFY2(list[1].title.isEmpty(), "2レス目以降は title 空");
+        QCOMPARE(list[1].name, QStringLiteral("ふぃるみすと"));
+    }
+
+    void parseDat_jpnkn_datetimeid()
+    {
+        using namespace yapcr::bbs;
+        // datetimeid: (曜日) を含めた日付 + 時刻の再構成 + ID 抽出
+        const QString text =
+            QStringLiteral("名無し<>sage<>2026/02/12(木) 23:41:56.06 ID:Ab3kF9xZ<>本文<>\n");
+        const QList<ResInfo> list = parseDat(text, BoardType::Jpnkn);
+        QCOMPARE(list.size(), 1);
+        // datetime に曜日を含む日付グループが再構成されているか
+        QCOMPARE(list[0].datetime, QStringLiteral("2026/02/12(木) 23:41:56.06"));
+        QCOMPARE(list[0].id,       QStringLiteral("Ab3kF9xZ"));
+    }
+
+    void parseDat_jpnkn_datetimeid_no_id()
+    {
+        using namespace yapcr::bbs;
+        // ID なし（したらば不使用だが jpnkn の一部にも存在）
+        const QString text =
+            QStringLiteral("名無し<>sage<>2026/02/12(木) 23:41:56.06<>本文<>\n");
+        const QList<ResInfo> list = parseDat(text, BoardType::Jpnkn);
+        QCOMPARE(list.size(), 1);
+        QCOMPARE(list[0].datetime, QStringLiteral("2026/02/12(木) 23:41:56.06"));
+        QVERIFY2(list[0].id.isEmpty(), "ID なし行の id は空");
+    }
+
+    void parseDat_jpnkn_remove_a_tag()
+    {
+        using namespace yapcr::bbs;
+        // <a href="...">...</a> のタグ部分を除去し、テキスト内容と <br> は残す
+        const QString text =
+            QStringLiteral("名無し<>sage<>2026/01/01(水) 00:00:00.00<>"
+                           "<a href=\"http://example.com\">リンクテキスト</a><br>次の行<>\n");
+        const QList<ResInfo> list = parseDat(text, BoardType::Jpnkn);
+        QCOMPARE(list.size(), 1);
+        // <a ...> と </a> タグが除去されてテキストと <br> は残る
+        QCOMPARE(list[0].message, QStringLiteral("リンクテキスト<br>次の行"));
+    }
+
+    void parseDat_jpnkn_name_with_trip()
+    {
+        using namespace yapcr::bbs;
+        // トリップ付き名前（</b>◆xxxxx<b> を含む）は name にそのまま保持
+        const QString text =
+            QStringLiteral("ふぃるみすと</b>◆9Fb2kCPDgA<b><>sage<>2026/02/12(木) 23:41:56.06"
+                           "<>テスト本文<>テストスレ\n");
+        const QList<ResInfo> list = parseDat(text, BoardType::Jpnkn);
+        QCOMPARE(list.size(), 1);
+        // </b> と <b> は a タグではないので残る
+        QCOMPARE(list[0].name, QStringLiteral("ふぃるみすと</b>◆9Fb2kCPDgA<b>"));
+    }
+
+    void parseDat_jpnkn_empty_lines_skipped()
+    {
+        using namespace yapcr::bbs;
+        const QString text =
+            QStringLiteral("\n")
+            + QStringLiteral("名無し<>sage<>2026/01/01(水) 00:00:00.00<>本文<>\n")
+            + QStringLiteral("\n");
+        const QList<ResInfo> list = parseDat(text, BoardType::Jpnkn);
+        QCOMPARE(list.size(), 1);
+    }
+
+    void parseDat_jpnkn_crlf()
+    {
+        using namespace yapcr::bbs;
+        const QString text =
+            QStringLiteral("名無し<>sage<>2026/01/01(水) 00:00:00.00<>CRLFテスト<>\r\n");
+        const QList<ResInfo> list = parseDat(text, BoardType::Jpnkn);
+        QCOMPARE(list.size(), 1);
+        QCOMPARE(list[0].message, QStringLiteral("CRLFテスト"));
+    }
+
+    // ======== parseDat — したらば ========
+
+    void parseDat_shitaraba_single()
+    {
+        using namespace yapcr::bbs;
+        // したらば書式: number<>name<>mail<>datetime<>message<>title<>id
+        const QString text =
+            QStringLiteral("1<>テストさん<>age<>2026/01/01 12:34:56<>したらばメッセージ<>したらばスレ<>ID111\n");
+        const QList<ResInfo> list = parseDat(text, BoardType::Shitaraba);
+        QCOMPARE(list.size(), 1);
+        QCOMPARE(list[0].number,   QStringLiteral("1"));
+        QCOMPARE(list[0].name,     QStringLiteral("テストさん"));
+        QCOMPARE(list[0].mail,     QStringLiteral("age"));
+        QCOMPARE(list[0].datetime, QStringLiteral("2026/01/01 12:34:56"));
+        QCOMPARE(list[0].message,  QStringLiteral("したらばメッセージ"));
+        QCOMPARE(list[0].title,    QStringLiteral("したらばスレ"));
+        QCOMPARE(list[0].id,       QStringLiteral("ID111"));
+    }
+
+    void parseDat_shitaraba_without_id_col()
+    {
+        using namespace yapcr::bbs;
+        // id 列なし（5 列のみ）でもパース成功
+        const QString text =
+            QStringLiteral("2<>名無し<>sage<>2026/01/01 00:00:00<>本文<>\n");
+        const QList<ResInfo> list = parseDat(text, BoardType::Shitaraba);
+        QCOMPARE(list.size(), 1);
+        QCOMPARE(list[0].number, QStringLiteral("2"));
+        QVERIFY2(list[0].id.isEmpty(), "id 列なし → id は空");
+    }
+
+    // ======== フィクスチャ統合 — jpnkn dat ========
+
+    void fixture_jpnkn_dat()
+    {
+        using namespace yapcr::bbs;
+        const QString dir = QStringLiteral(BBS_FIXTURES_DIR);
+        QFile f(dir + QStringLiteral("/jpnkn/dat/1770907315.dat"));
+        if (!f.open(QIODevice::ReadOnly)) {
+            QSKIP("フィクスチャ jpnkn/dat/1770907315.dat が見つからない");
+        }
+        const QByteArray raw = f.readAll();
+
+        bool ok = false;
+        const QString text = decodeFrom(raw, Charset::ShiftJis, &ok);
+        QVERIFY2(ok, "Shift_JIS デコードエラー");
+
+        const QList<ResInfo> list = parseDat(text, BoardType::Jpnkn);
+        QCOMPARE(list.size(), 9);  // フィクスチャ dat は 9 レス
+
+        // 1レス目: title あり
+        QVERIFY2(!list[0].title.isEmpty(), "1レス目の title が空");
+        QVERIFY2(!list[0].name.isEmpty(),  "name が空");
+        QVERIFY2(!list[0].datetime.isEmpty(), "datetime が空");
+    }
+
+    // ======== フィクスチャ統合 — したらば dat（EUC-JP、CP51932 不可環境は SKIP）========
+
+    void fixture_shitaraba_dat()
+    {
+        using namespace yapcr::bbs;
+        if (!isCharsetSupported(Charset::EucJp)) {
+            QSKIP("EUC-JP (CP51932) がこの環境では利用不可 — M3.8 で実機確認");
+        }
+        const QString dir = QStringLiteral(BBS_FIXTURES_DIR);
+        QFile f(dir + QStringLiteral("/shitaraba/dat/sample.dat"));
+        if (!f.open(QIODevice::ReadOnly)) {
+            QSKIP("フィクスチャ shitaraba/dat/sample.dat が見つからない");
+        }
+        const QByteArray raw = f.readAll();
+
+        bool ok = false;
+        const QString text = decodeFrom(raw, Charset::EucJp, &ok);
+        QVERIFY2(ok, "EUC-JP デコードエラー");
+
+        const QList<ResInfo> list = parseDat(text, BoardType::Shitaraba);
+        QVERIFY2(list.size() >= 1, "したらば dat のパース結果が空");
+        QVERIFY2(!list[0].number.isEmpty(), "したらば number が空");
+        QVERIFY2(!list[0].name.isEmpty(),   "したらば name が空");
+    }
+
+    // ======== extractUrls ========
+
+    void extractUrls_http()
+    {
+        using namespace yapcr::bbs;
+        const QList<QString> urls = extractUrls(
+            QStringLiteral("テキスト http://example.com/path?q=1 です"));
+        QCOMPARE(urls.size(), 1);
+        QCOMPARE(urls[0], QStringLiteral("http://example.com/path?q=1"));
+    }
+
+    void extractUrls_ttp_normalized()
+    {
+        using namespace yapcr::bbs;
+        // ttp:// → http:// に正規化
+        const QList<QString> urls = extractUrls(
+            QStringLiteral("ttp://example.com/page"));
+        QCOMPARE(urls.size(), 1);
+        QCOMPARE(urls[0], QStringLiteral("http://example.com/page"));
+    }
+
+    void extractUrls_https()
+    {
+        using namespace yapcr::bbs;
+        // https:// はそのまま
+        const QList<QString> urls = extractUrls(
+            QStringLiteral("https://example.com/"));
+        QCOMPARE(urls.size(), 1);
+        QCOMPARE(urls[0], QStringLiteral("https://example.com/"));
+    }
+
+    void extractUrls_multiple()
+    {
+        using namespace yapcr::bbs;
+        const QList<QString> urls = extractUrls(
+            QStringLiteral("見て http://a.com/ と https://b.com/path"));
+        QCOMPARE(urls.size(), 2);
+    }
+
+    void extractUrls_no_url()
+    {
+        using namespace yapcr::bbs;
+        const QList<QString> urls = extractUrls(QStringLiteral("URLなしのテキスト"));
+        QCOMPARE(urls.size(), 0);
+    }
+
+    // ======== extractAnchors ========
+
+    void extractAnchors_single()
+    {
+        using namespace yapcr::bbs;
+        // dat 内は HTML エスケープ済み → &gt;&gt;n で当たる（ASCII >> では当たらない）
+        const QList<Range> ranges = extractAnchors(QStringLiteral("&gt;&gt;123"));
+        QCOMPARE(ranges.size(), 1);
+        QCOMPARE(ranges[0].first, 123);
+        QCOMPARE(ranges[0].last,  123);
+    }
+
+    void extractAnchors_range()
+    {
+        using namespace yapcr::bbs;
+        // &gt;&gt;1-5 → first=1, last=5
+        const QList<Range> ranges = extractAnchors(QStringLiteral("&gt;&gt;1-5"));
+        QCOMPARE(ranges.size(), 1);
+        QCOMPARE(ranges[0].first, 1);
+        QCOMPARE(ranges[0].last,  5);
+    }
+
+    void extractAnchors_group()
+    {
+        using namespace yapcr::bbs;
+        // &gt;&gt;1,3,5 → 3 つの単点 Range
+        const QList<Range> ranges = extractAnchors(QStringLiteral("&gt;&gt;1,3,5"));
+        QCOMPARE(ranges.size(), 3);
+        QCOMPARE(ranges[0].first, 1);
+        QCOMPARE(ranges[1].first, 3);
+        QCOMPARE(ranges[2].first, 5);
+    }
+
+    void extractAnchors_fullwidth_gt()
+    {
+        using namespace yapcr::bbs;
+        // 全角 ＞＞１２３
+        const QList<Range> ranges = extractAnchors(QStringLiteral("＞＞１２３"));
+        QCOMPARE(ranges.size(), 1);
+        QCOMPARE(ranges[0].first, 123);
+        QCOMPARE(ranges[0].last,  123);
+    }
+
+    void extractAnchors_fullwidth_range()
+    {
+        using namespace yapcr::bbs;
+        // 全角 ＞＞１－５（全角ハイフン U+FF0D）
+        const QList<Range> ranges = extractAnchors(QStringLiteral("＞＞１－５"));
+        QCOMPARE(ranges.size(), 1);
+        QCOMPARE(ranges[0].first, 1);
+        QCOMPARE(ranges[0].last,  5);
+    }
+
+    void extractAnchors_fullwidth_comma()
+    {
+        using namespace yapcr::bbs;
+        // 全角 ＞＞１，３（全角カンマ U+FF0C）
+        const QList<Range> ranges = extractAnchors(QStringLiteral("＞＞１，３"));
+        QCOMPARE(ranges.size(), 2);
+        QCOMPARE(ranges[0].first, 1);
+        QCOMPARE(ranges[1].first, 3);
+    }
+
+    void extractAnchors_no_anchor()
+    {
+        using namespace yapcr::bbs;
+        // ASCII > は当たらない
+        const QList<Range> ranges = extractAnchors(QStringLiteral(">>123"));
+        QCOMPARE(ranges.size(), 0);
+    }
+
+    // ======== extractId ========
+
+    void extractId_match()
+    {
+        using namespace yapcr::bbs;
+        // 8 文字 ID
+        const QString id = extractId(QStringLiteral("2026/01/01 ID:Ab3kF9xZ テキスト"));
+        QCOMPARE(id, QStringLiteral("Ab3kF9xZ"));
+    }
+
+    void extractId_no_match()
+    {
+        using namespace yapcr::bbs;
+        const QString id = extractId(QStringLiteral("IDなしのテキスト"));
+        QVERIFY2(id.isEmpty(), "ID なし → 空文字列");
+    }
+
+    void extractId_short_id_not_match()
+    {
+        using namespace yapcr::bbs;
+        // 7 文字以下は当たらない
+        const QString id = extractId(QStringLiteral("ID:Abc123"));  // 7 文字
+        QVERIFY2(id.isEmpty(), "7 文字 ID は当たらない");
     }
 };
 
