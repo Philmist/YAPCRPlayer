@@ -10,7 +10,6 @@
 #include "net/http_message.h"
 
 #include <QDateTime>
-#include <QDebug>
 #include <QUrl>
 
 namespace yapcr::bbs {
@@ -86,16 +85,11 @@ void BbsSession::loadSubject()
 
 void BbsSession::loadDat()
 {
-    if (!loc_.valid || loc_.thread.key.isEmpty()) {
-        qDebug() << "[bbs] loadDat: 中断 valid=" << loc_.valid
-                 << "key=" << loc_.thread.key;
-        return;
-    }
+    if (!loc_.valid || loc_.thread.key.isEmpty()) { return; }
 
     net::HttpRequest req;
     req.method = net::HttpMethod::Get;
     req.url    = QUrl(detail::mkDatUrl(loc_.board, loc_.thread.key, loc_.type));
-    qDebug() << "[bbs] loadDat: GET" << req.url.toString();
     if (!datLastModified_.isEmpty()) {
         req.headers.append({QByteArrayLiteral("If-Modified-Since"),
                             datLastModified_.toUtf8()});
@@ -134,11 +128,6 @@ void BbsSession::onSubjectFinished(const net::HttpResponse& resp)
 
 void BbsSession::onDatFinished(const net::HttpResponse& resp)
 {
-    qDebug() << "[bbs] onDatFinished: ok=" << resp.ok
-             << "status=" << resp.statusCode
-             << "notModified=" << resp.notModified
-             << "bodySize=" << resp.body.size();
-    qDebug() << "[bbs] body(hex200):" << resp.body.left(200).toHex(' ');
     if (resp.notModified) {
         emit datLoaded(0, true);
         return;
@@ -153,9 +142,7 @@ void BbsSession::onDatFinished(const net::HttpResponse& resp)
     }
     const QString text          = decodeFrom(resp.body, loc_.board.code);
     const QList<ResInfo> parsed = parseDat(text, loc_.type);
-    qDebug() << "[bbs] parseDat: parsed=" << parsed.size() << "レス";
-    const int newCount = store_.merge(parsed, loc_.type);
-    qDebug() << "[bbs] merge: newCount=" << newCount;
+    const int newCount          = store_.merge(parsed, loc_.type);
     emit datLoaded(newCount, false);
 }
 
