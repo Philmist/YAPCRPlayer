@@ -21,7 +21,9 @@ if(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
 endif()
 
 # --- 依存 ---
-# M0 は Core/Gui/Widgets のみ。M1 で Network 追加。Core5Compat は M3(BBS) で追加する。
+# M0 は Core/Gui/Widgets のみ。M1 で Network 追加。
+# Core5Compat（Shift-JIS/EUC-JP コーデック用）はこの Qt 6.11.1 ビルドに未同梱のため
+# charset.cpp では Windows API で代替している。
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network)
 qt_standard_project_setup()        # AUTOMOC/AUTOUIC/AUTORCC を有効化
 
@@ -30,10 +32,11 @@ find_package(Mpv REQUIRED)
 # --- テスト ---
 enable_testing()
 
-# --- モジュール（依存は一方向 DAG: common <- net <- peercast, common <- player, app <- 全部） ---
+# --- モジュール（依存は一方向 DAG: common <- net <- peercast, common <- bbs, common <- player, app <- 全部） ---
 add_subdirectory(src/common)
 add_subdirectory(src/net)
 add_subdirectory(src/peercast)
+add_subdirectory(src/bbs)
 add_subdirectory(src/player)
 add_subdirectory(src/app)
 add_subdirectory(tests)

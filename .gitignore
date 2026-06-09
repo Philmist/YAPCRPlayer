@@ -76,6 +76,7 @@ $RECYCLE.BIN/
 .idea/
 *.swp
 *~
+/tags
 # VS Code: 共有したい設定のみ許可
 .vscode/*
 !.vscode/extensions.json
