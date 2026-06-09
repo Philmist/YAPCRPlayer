@@ -1,9 +1,13 @@
 add_library(bbs STATIC
     src/charset.cpp
     src/board_url.cpp
+    src/setting.cpp
+    src/subject.cpp
     include/bbs/models.h
     include/bbs/charset.h
     include/bbs/board_url.h
+    include/bbs/setting.h
+    include/bbs/subject.h
 )
 add_library(yapcr::bbs ALIAS bbs)
 
