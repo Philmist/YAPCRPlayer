@@ -4,11 +4,14 @@
 #include "session_controller.h"
 #include "res_list_pane.h"   // bbs/models.h を推移的に含む（yapcr::bbs::ResInfo）
 #include "res_input_bar.h"
+#include "board_title_bar.h" // M3.7: 掲示板タイトル帯
+#include "res_popup.h"       // M3.7: hover レス・ポップアップ
 #include "bbs/models.h"
 #include "player/mpv_backend.h"
 #include "common/version.h"
 
 #include <QAction>
+#include <QCursor>
 #include <QDebug>
 #include <QDockWidget>
 #include <QMenu>
@@ -16,15 +19,30 @@
 #include <QShowEvent>
 #include <QStatusBar>
 #include <QString>
+#include <QVBoxLayout>
 #include <QtGlobal>
 
 namespace yapcr::app {
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
-    // 映像ウィジェットをセンターに配置
-    videoWidget_ = new VideoHostWidget(this);
-    videoWidget_->setMinimumSize(640, 360);
-    setCentralWidget(videoWidget_);
+    // M3.7: centralWidget を QWidget コンテナ化し、映像ウィジェットと掲示板タイトル帯を縦積みする。
+    // 注意: videoWidget_->winId() は attachMpv()（showEvent 後）で mpv に渡す。
+    //       コンテナ化は attach 前に確定させ、attach 後に reparent しないこと。
+    {
+        QWidget* central = new QWidget(this);
+        QVBoxLayout* vl  = new QVBoxLayout(central);
+        vl->setContentsMargins(0, 0, 0, 0);
+        vl->setSpacing(0);
+
+        videoWidget_ = new VideoHostWidget(central);
+        videoWidget_->setMinimumSize(640, 360);
+        vl->addWidget(videoWidget_, 1);
+
+        boardTitleBar_ = new BoardTitleBar(central);
+        vl->addWidget(boardTitleBar_, 0);
+
+        setCentralWidget(central);
+    }
 
     // ステータスバー（mpv ログ・接続状態の表示）
     statusBar()->showMessage(
@@ -82,13 +100,35 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
                 }
             });
 
-    // M3.7: hover ポップアップ用クエリプロバイダ注入
+    // M3.7: hover ポップアップ用クエリプロバイダ注入（右ドック: アンカーポップアップ副次機能）
     resListPane_->setByRefProvider([this](int n) {
         return session_->bbsByRef(n);
     });
     resListPane_->setByRangeProvider([this](yapcr::bbs::Range r) {
         return session_->bbsByRange(r);
     });
+
+    // M3.7: 掲示板タイトル帯 → 直近レスオーバーレイ（本命機能）
+    recentPopup_ = new ResPopup(this);
+    // スレッドタイトル/件数が更新されたらタイトル帯に反映する
+    connect(session_, &SessionController::bbsThreadInfoChanged,
+            boardTitleBar_, &BoardTitleBar::setInfo);
+    // タイトル帯に hover → 直近 40 件を取得して映像上にポップアップ表示
+    connect(boardTitleBar_, &BoardTitleBar::hovered,
+            this, [this](QPoint globalPos) {
+                const auto recentRes = session_->bbsRecent(40);
+                if (!recentRes.isEmpty()) {
+                    recentPopup_->showRecent(recentRes, globalPos);
+                }
+            });
+    // タイトル帯からカーソルが外れたとき、ポップアップ自身の上にいる場合は閉じない
+    connect(boardTitleBar_, &BoardTitleBar::left,
+            this, [this] {
+                const QRect popupRect = recentPopup_->geometry();
+                if (!popupRect.contains(QCursor::pos())) {
+                    recentPopup_->hidePopup();
+                }
+            });
     connect(session_, &SessionController::bbsPostFinished,
             this, [this](bool ok) {
                 resInputBar_->setInputEnabled(true);

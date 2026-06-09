@@ -63,6 +63,12 @@ public:
     // 指定範囲のレスを返す。
     QList<yapcr::bbs::ResInfo> bbsByRange(yapcr::bbs::Range range) const;
 
+    // 直近 n 件のレスを返す（M3.7 タイトル帯 hover 用）。未初期化なら空を返す。
+    QList<yapcr::bbs::ResInfo> bbsRecent(int n) const;
+
+    // 現在のスレッドタイトル（未取得なら板タイトル、それも空なら空文字）
+    QString bbsThreadTitle() const;
+
     QString currentPath()    const { return path_; }
     QString currentName()    const { return name_; }
     QString currentContact() const { return contact_; }
@@ -83,6 +89,9 @@ signals:
 
     // BBS dat が更新された。resList は全レス（差分追記は ResListPane 側で管理）。
     void bbsResAppended(const QList<yapcr::bbs::ResInfo>& resList);
+
+    // スレッドタイトル/件数が更新された（M3.7 タイトル帯 hover 向け）。
+    void bbsThreadInfoChanged(const QString& title, int count);
 
     // 書き込み結果。ok=true: 成功（入力欄をクリアする）、false: 失敗。
     void bbsPostFinished(bool ok);

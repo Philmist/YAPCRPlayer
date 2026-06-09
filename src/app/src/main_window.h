@@ -15,6 +15,8 @@ class VideoHostWidget;
 class SessionController;
 class ResListPane;
 class ResInputBar;
+class BoardTitleBar;
+class ResPopup;
 
 // アプリケーションのメインウィンドウ。
 //
@@ -68,6 +70,10 @@ private:
     QDockWidget*  resDock_{nullptr};
     QDockWidget*  inputDock_{nullptr};
     QAction*      actBbsRefresh_{nullptr};
+
+    // M3.7: 掲示板タイトル帯 + 直近レスポップアップ（映像上オーバーレイ）
+    BoardTitleBar* boardTitleBar_{nullptr};
+    ResPopup*      recentPopup_{nullptr};
 
     // openMedia が attach より先に呼ばれた場合に備えて引数を保持する
     struct PendingMedia {

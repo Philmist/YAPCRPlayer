@@ -302,6 +302,9 @@ void SessionController::onBbsDatLoaded(int newCount, bool notModified)
         emit statusMessage(tr("BBS: 新着なし"));
     }
     emit bbsResAppended(bbs_->dat());
+    // M3.7: タイトル帯に最新のスレッドタイトルと件数を通知
+    const QString title = bbsThreadTitle();
+    emit bbsThreadInfoChanged(title, bbs_->count());
 }
 
 void SessionController::onBbsPostSucceeded()
@@ -341,6 +344,22 @@ QList<bbs::ResInfo> SessionController::bbsByRange(bbs::Range range) const
 {
     if (!bbs_ || !bbs_->isValid()) return {};
     return bbs_->store().byRange(range);
+}
+
+QList<bbs::ResInfo> SessionController::bbsRecent(int n) const
+{
+    if (!bbs_ || !bbs_->isValid()) return {};
+    const int total = bbs_->count();
+    if (total <= 0) return {};
+    const int first = qMax(1, total - n + 1);
+    return bbs_->store().byRange(bbs::Range{first, total});
+}
+
+QString SessionController::bbsThreadTitle() const
+{
+    if (!bbs_ || !bbs_->isValid()) return {};
+    const QString t = bbs_->threadTitle();
+    return t.isEmpty() ? bbs_->boardTitle() : t;
 }
 
 }  // namespace yapcr::app
