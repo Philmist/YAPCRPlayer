@@ -93,9 +93,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     connect(session_, &SessionController::bbsResAppended,
             this, [this](const QList<yapcr::bbs::ResInfo>& resList) {
                 resListPane_->appendResList(resList);
-                // BBS データが届いたらドックを自動表示（初回のみ）
+                // 書き込みバーは初回受信時に自動表示する。
+                // レス一覧ドックはユーザーが明示的に開く（hover ポップアップで代替できる）。
                 if (!resList.isEmpty()) {
-                    resDock_->show();
                     inputDock_->show();
                 }
             });

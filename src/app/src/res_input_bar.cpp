@@ -15,11 +15,11 @@ ResInputBar::ResInputBar(QWidget* parent) : QWidget(parent)
     edit_    = new QPlainTextEdit(this);
     sendBtn_ = new QPushButton(tr("送信(&S)"), this);
 
-    // 入力欄は低背（3行程度）
+    // 入力欄は低背（2行）。PCRPlayer 参考: 書き込みバーはスリム。
     edit_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
     const QFontMetrics fm(edit_->font());
     const int lineH = fm.lineSpacing();
-    edit_->setFixedHeight(lineH * 3 + 12);
+    edit_->setFixedHeight(lineH * 2 + 8);
 
     sendBtn_->setFocusPolicy(Qt::TabFocus);
     sendBtn_->setFixedWidth(80);
