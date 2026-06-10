@@ -1,0 +1,8 @@
+# clangd 設定（YAPCRPlayer）
+#
+# compile_commands.json は CMake が CMAKE_EXPORT_COMPILE_COMMANDS=ON で
+# build/msvc-ninja/ に生成する（CMakePresets.json の binaryDir 固定）。
+# この場所は clangd の自動探索範囲（ソース直下と ./build）の外なので、明示指定する。
+# これが無いと clangd はフォールバック（include パス無し）になり Qt/mpv が全滅し偽陽性が多発する。
+CompileFlags:
+  CompilationDatabase: build/msvc-ninja
