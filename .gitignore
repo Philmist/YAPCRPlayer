@@ -85,6 +85,9 @@ $RECYCLE.BIN/
 !.vscode/launch.json
 !.vscode/tasks.json
 
+# ---- Claude ----
+.claude/settings.local.json
+
 # ============================================================
 # 注記:
 # - submodule ディレクトリ (mpv/ , peercaststation/) は無視しない。
