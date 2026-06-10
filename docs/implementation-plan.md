@@ -75,6 +75,8 @@ app     ── エントリポイント、CLI 解析(path/name/contact)、Sessio
   バー除外の正確ピクセル(OBS タイル用)、全画面、スナップショット(`screenshot`)。
 - **M5 設定/操作**: TOML 永続化、ショートカット(PCRPlayer 既定＋TOML 再マップ、Qt 集約/mpv 内蔵キー無効)、
   最小化およびミュート(別々に実行できること)、ファイル/クリップボード URL を開く。
+  **M5.0〜M5.5 に分割済み**（`docs/m5-config-subplan.md`。config モジュール新設→ActionRegistry→TOML リマップ→
+  音量/ミュート/最小化→ファイル/URL→終了時保存）。
 - **M6 仕上げ**: 安定化、パッケージング、DEFER 項目(ジェスチャ等)の見直し。
 
 差別化価値（ライブ視聴＋実況）が M3 完了時点で立ち上がる順序。

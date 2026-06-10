@@ -1,6 +1,6 @@
 # YAPCRPlayer 設計決定記録（ADR / 依存チェーン）
 
-最終更新: 2026-06-08
+最終更新: 2026-06-11
 
 ## 0. 背景と目的
 
@@ -115,18 +115,48 @@ PCRPlayer の資産は「コードそのまま流用」ではなく、**BBS/Peer
   WinHTTP+boost gzip+Mlang を置換。文字コードは jpnkn=Shift_JIS / したらば=EUC-JP を扱うため
   **Qt6 Core5Compat(QTextCodec)** 等の旧コーデック対応が必要（実装時に各板の実エンコーディングを最終確認）。
   書き込みは PCRPlayer 同様の **2 段階 Cookie フロー**（確認 Cookie 往復 + name/mail/message）を移植。
+  **投稿の name/mail（M5 確定）**: PCRPlayer は `BBSDlg.cpp:888` で `post(L"", sage?L"sage":L"", text)` ＝
+  **name は常に空（名無し）・mail は sage トグルのみ**（自由入力 mail 欄を持たない。PeerCast 実況文化では
+  名無し投稿が通例で、sage か否かだけが重要。任意 mail が要るなら通常の Web ブラウザを使う）。よって YAPCRPlayer も
+  **name は設定項目として残すが既定空、mail は廃止して `sage` ブール（トグル）に置換**する。書き込み確定キーは
+  PCRPlayer の Shift/Ctrl/Alt+Enter（`EDIT_SHORTCUT_*`）を踏襲。
 - **ショートカット（Q12 確定）**: コア固定の妥当なデフォルト＋**TOML で再マップ可**（GUI 編集画面は後日）。
   入力は **Qt が一手に集約**し、mpv 内蔵キー処理は無効化（`input-default-bindings=no`/`input-vo-keyboard=no`）して
   `--wid` 子窓によるキー横取りを防ぐ。**デフォルトのキー割当は PCRPlayer を踏襲**
   （実装時に `Shortcut.cpp` / `OperationShortcutDlg` の既定値を抽出して移植）。
+  **M5 確定（詳細は `docs/m5-config-subplan.md`）**: 中央集権 `ActionRegistry`（`enum class ActionId` ＋
+  `id↔keys` テーブル）で間接化し、TOML リマップ・メニュー生成を単一テーブルから派生。キー表現は `QKeySequence`
+  互換文字列（テンキーは `Num` プレフィックス規約）。**1アクションに複数キー可・1キーは1アクションまで・衝突は
+  後勝ち＋警告**（PCRPlayer の厳密 1:1 から意図的に緩和）。ディスパッチは中央 `keyPressEvent` 集約で、**レス欄
+  フォーカス／IME 変換中はプレイヤーショートカット無効・Tab でフォーカス往復**（`IDM_WINDOW_EDIT` 踏襲）。
 - **設定永続化（Q11 確定）**: **TOML** ファイルを `%APPDATA%\YAPCRPlayer\` に保存（任意でポータブル配置＝
   実行ファイル隣も可）。入れ子/配列構造（プリセット群・ショートカット等）に素直で手編集・共有可
   （タイル配信のサイズプリセット使い回しにも有用）。実装は toml++ 等。将来 JSON へ変える積極的理由が
   出たら再検討。PCRPlayer のバイナリ Serialize は移植しない。
+  **M5 確定（詳細は `docs/m5-config-subplan.md`）**: 単一 `config.toml` 内で**設定/プリセット（`[general]`
+  `[restore]` `[shortcuts]` `[display]` `[snapshot]` `[bbs]` `[playback]`）とランタイム状態（`[state]`）を
+  セクション分離**。配置は実行ファイル隣接優先 → `%APPDATA%\YAPCRPlayer\`。起動時1回ロードして DI、**保存は終了時
+  一括のみ**（即時保存しない。PCRPlayer も `sl_.save`(`MainDlg.cpp:703`) は終了処理のみで、sage トグルすらメモリ
+  保持→終了時保存だった）。パース失敗時はデフォルト起動＋ログ、不明キー破棄。**終了時保存トグル群**
+  （`position/size/aspect/volume/mute`、既定 `aspect` のみ off）は PCRPlayer `EndConfig` を踏襲。**設定 GUI は
+  DEFER**（TOML 手編集のみ。代わりに「設定フォルダを開く」「再読み込み」導線を用意）。
 - **小機能仕分け（Q13 確定）**: KEEP=チャンネル情報表示・最小化時ミュート・ファイル/クリップボード URL を開く(軽量)。
-  DEFER=マウスジェスチャ・最小化時一時停止(ローカルのみ)。DROP=プロセス優先度・お気に入り/チャンネル一覧/YP 閲覧・
-  HTML 依存の BBS 抽出。**チャンネル探索/YP/お気に入りは YP ブラウザの責務**で YAPCRPlayer は持たない
-  （PCRPlayer は PeCaRecorder という YP ブラウザの一部として配布されていた経緯）。
+  DEFER=マウスジェスチャ・最小化時一時停止(ローカルのみ)・音量バランス(`af=pan` 要・実況用途で重要度低)。
+  DROP=プロセス優先度・お気に入り/チャンネル一覧/YP 閲覧・HTML 依存の BBS 抽出。**チャンネル探索/YP/お気に入りは
+  YP ブラウザの責務**で YAPCRPlayer は持たない（PCRPlayer は PeCaRecorder という YP ブラウザの一部として
+  配布されていた経緯）。
+  - **最小化とミュートの独立（M5 確定）**: `Minimize`(最小化のみ)・`Mute`(mpv `mute` プロパティ。**音量0とは区別**)・
+    `MinimizeMute`(設定トグル: 最小化で自動ミュート、復帰で自動解除)は互いに独立。自動ミュートで入った時だけ
+    復帰解除する（手動ミュート中の最小化→復帰で勝手に解除しない）。
+  - **ファイル/クリップボードを開く（M5 確定）**: 手動オープン（ダイアログ/クリップボード）は**パスのみ**を受け、
+    BBS 自動接続はしない（pls URL なら channel info の取得・表示はする）。PCRPlayer 踏襲（`MainDlgSub.cpp:114`
+    `OpenFile` は `bbs.execute` を `if(commandline)` でガードし、手動オープンでは BBS を繋がない）。
+    クリップボード判定は pls/http/ローカルパスの3種。`OpenContactInBrowser` は `QDesktopServices` で軽量に。
+    専ブラ起動(`IDM_BBS_BROWSER`)は DROP。
+  - **【M6 拡張・意図的乖離】pls URL オープン時の BBS 自動接続**: pls URL を開いた際に PeerCast viewxml の
+    `name`/`url`(コンタクト) を自動取得し、チャンネル名と掲示板を自動設定して BBS 自動接続する。`ChannelInfo` は
+    既に `name`/`url`/`comment` をパース済みなので技術的に可能。**PCRPlayer は CLI 3引数起動時のみ自動接続**して
+    いたため、これは明確な UX 改善であり PCRPlayer 踏襲の枠を超える拡張。実装は M6。
 - **PeerCast 制御（プレイヤー側から実行・確定）**: 起動 URL `http://<host>:<port>/pls/<32桁ID>?tip=...` の
   **先頭 `host:port` がローカル PeerCast エンドポイント**。legacy admin HTTP で叩く（PeerCastStation も互換維持）。
   PCRPlayer `PeerCast.cpp` を参照仕様に移植:
