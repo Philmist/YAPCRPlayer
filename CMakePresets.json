@@ -19,6 +19,12 @@
     {
       "name": "msvc-ninja",
       "configurePreset": "msvc-ninja"
+    },
+    {
+      "name": "deploy",
+      "displayName": "deploy (windeployqt + libmpv → dist/)",
+      "configurePreset": "msvc-ninja",
+      "targets": ["deploy"]
     }
   ]
 }
