@@ -6,9 +6,9 @@
 
 class QAction;
 class QActionGroup;
-class QDockWidget;
 class QKeyEvent;
 class QMouseEvent;
+class QWidget;
 
 namespace yapcr::player {
 class MpvBackend;
@@ -90,12 +90,13 @@ private:
     QAction* actStop_{nullptr};
     QAction* actReload_{nullptr};
 
-    // M3.6: BBS ペイン・入力バー・ドック
+    // M3.6: BBS パネル（レス一覧 + 書き込み欄、centralWidget 内固定）
     ResListPane*  resListPane_{nullptr};
     ResInputBar*  resInputBar_{nullptr};
-    QDockWidget*  resDock_{nullptr};
-    QDockWidget*  inputDock_{nullptr};
+    QWidget*      bbsPanel_{nullptr};       // レス一覧 + 書き込み欄をまとめた固定パネル
+    bool          bbsUserClosed_{false};    // ユーザーが手動で閉じたら true（自動再表示を抑制）
     QAction*      actBbsRefresh_{nullptr};
+    QAction*      actToggleBbs_{nullptr};
 
     // M3.7: 掲示板タイトル帯 + 直近レスポップアップ（映像上オーバーレイ）
     BoardTitleBar* boardTitleBar_{nullptr};
@@ -123,8 +124,7 @@ private:
         bool menuBar{true};
         bool statusBar{true};
         bool titleBar{true};    // boardTitleBar_
-        bool resDock{false};
-        bool inputDock{false};
+        bool bbsPanel{false};   // bbsPanel_
     } savedBars_;                // M5: config化（全画面時のバー表示有無）
 
     // M4.4: スナップショット

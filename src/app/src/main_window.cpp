@@ -19,7 +19,6 @@
 #include <QDebug>
 #include <QDesktopServices>
 #include <QDir>
-#include <QDockWidget>
 #include <QKeyEvent>
 #include <QMenu>
 #include <QMenuBar>
@@ -50,6 +49,26 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
 
         boardTitleBar_ = new BoardTitleBar(central);
         vl->addWidget(boardTitleBar_, 0);
+
+        // M3.6: BBS パネル（レス一覧 + 書き込み欄、初期は非表示）
+        // QDockWidget を使わず centralWidget 内の固定レイアウトにすることで
+        // フォーカス問題・フルスクリーン不具合・再ドッキング困難を解消する。
+        bbsPanel_ = new QWidget(central);
+        {
+            auto* bbsLayout = new QVBoxLayout(bbsPanel_);
+            bbsLayout->setContentsMargins(0, 0, 0, 0);
+            bbsLayout->setSpacing(0);
+
+            resListPane_ = new ResListPane(bbsPanel_);
+            resListPane_->setMinimumHeight(120);
+
+            resInputBar_ = new ResInputBar(bbsPanel_);
+
+            bbsLayout->addWidget(resListPane_, 1);
+            bbsLayout->addWidget(resInputBar_, 0);
+        }
+        bbsPanel_->hide();
+        vl->addWidget(bbsPanel_, 0);
 
         setCentralWidget(central);
     }
@@ -101,30 +120,13 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     connect(session_, &SessionController::statusMessage,
             this,     &MainWindow::onStatusMessage);
 
-    // M3.6: BBS レス一覧ペイン（右ドック、初期は非表示）
-    resListPane_ = new ResListPane(this);
-    resDock_ = new QDockWidget(tr("BBS レス一覧"), this);
-    resDock_->setObjectName(QStringLiteral("resDock"));
-    resDock_->setWidget(resListPane_);
-    addDockWidget(Qt::RightDockWidgetArea, resDock_);
-    resDock_->hide();
-
-    // M3.6: BBS レス入力バー（下部ドック、初期は非表示）
-    resInputBar_ = new ResInputBar(this);
-    inputDock_ = new QDockWidget(tr("BBS 書き込み"), this);
-    inputDock_->setObjectName(QStringLiteral("inputDock"));
-    inputDock_->setWidget(resInputBar_);
-    addDockWidget(Qt::BottomDockWidgetArea, inputDock_);
-    inputDock_->hide();
-
     // M3.6: BBS シグナル配線
     connect(session_, &SessionController::bbsResAppended,
             this, [this](const QList<yapcr::bbs::ResInfo>& resList) {
                 resListPane_->appendResList(resList);
-                // 書き込みバーは初回受信時に自動表示する。
-                // レス一覧ドックはユーザーが明示的に開く（hover ポップアップで代替できる）。
-                if (!resList.isEmpty()) {
-                    inputDock_->show();
+                // 初回受信時のみ自動表示。ユーザーが手動で閉じた後は自動再表示しない。
+                if (!resList.isEmpty() && !bbsUserClosed_) {
+                    bbsPanel_->show();
                 }
             });
 
@@ -202,12 +204,16 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
             session_->bbsRefresh();
         });
         menu->addSeparator();
-        QAction* toggleResDock   = resDock_->toggleViewAction();
-        QAction* toggleInputDock = inputDock_->toggleViewAction();
-        toggleResDock->setText(tr("レス一覧 (&L) 表示切替"));
-        toggleInputDock->setText(tr("書き込み欄 (&W) 表示切替"));
-        menu->addAction(toggleResDock);
-        menu->addAction(toggleInputDock);
+        actToggleBbs_ = menu->addAction(tr("BBS パネル (&B) 表示切替"));
+        connect(actToggleBbs_, &QAction::triggered, this, [this] {
+            if (bbsPanel_->isVisible()) {
+                bbsPanel_->hide();
+                bbsUserClosed_ = true;
+            } else {
+                bbsPanel_->show();
+                bbsUserClosed_ = false;
+            }
+        });
     }
 
     // M4.1: 「表示」メニュー（フィットモード・アスペクト比）
@@ -457,16 +463,14 @@ void MainWindow::enterFullScreen()
         menuBar()->isVisible(),
         statusBar()->isVisible(),
         boardTitleBar_->isVisible(),
-        resDock_->isVisible(),
-        inputDock_->isVisible()
+        bbsPanel_->isVisible()
     };
 
-    // クリーンな映像（Q5=A）: 全バー/ドックを隠す。// M5: config化（全画面時のバー表示有無）
+    // クリーンな映像（Q5=A）: 全バー/パネルを隠す。// M5: config化（全画面時のバー表示有無）
     menuBar()->hide();
     statusBar()->hide();
     boardTitleBar_->hide();
-    resDock_->hide();
-    inputDock_->hide();
+    bbsPanel_->hide();
 
     // M4.2 のサイズ固定を一時解除（固定箱のまま全画面にすると映像が画面を埋めない）。
     // currentSizeMode_ は保持し、leaveFullScreen() で再適用する。
@@ -486,8 +490,7 @@ void MainWindow::leaveFullScreen()
     menuBar()->setVisible(savedBars_.menuBar);
     statusBar()->setVisible(savedBars_.statusBar);
     boardTitleBar_->setVisible(savedBars_.titleBar);
-    resDock_->setVisible(savedBars_.resDock);
-    inputDock_->setVisible(savedBars_.inputDock);
+    bbsPanel_->setVisible(savedBars_.bbsPanel);
 
     // 選択中のサイズモードを再適用（ズーム/絶対サイズの固定を元に戻す）
     reapplySizeMode();
