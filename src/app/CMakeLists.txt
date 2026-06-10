@@ -14,6 +14,8 @@ qt_add_executable(YAPCRPlayer WIN32
     src/res_popup.h
     src/board_title_bar.cpp    # M3.7: 掲示板タイトル帯（映像下・hover トリガ）
     src/board_title_bar.h
+    src/window_geometry.cpp    # M4.0: 窓サイズ純計算ヘルパ
+    src/window_geometry.h
 )
 
 target_link_libraries(YAPCRPlayer PRIVATE

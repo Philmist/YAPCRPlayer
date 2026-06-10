@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QList>
 #include <QObject>
 #include <QString>
 #include <QStringList>
@@ -13,8 +14,9 @@ namespace yapcr::player {
 //
 // 使い方:
 //   1. MainWindow を show() して VideoHostWidget の winId() を実体化する。
-//   2. attach(videoWidget->winId()) で mpv を初期化してアタッチする。
-//   3. load(url) で再生を開始する。
+//   2. 必要なら setOption() でオプションを積む（attach() 前専用）。
+//   3. attach(videoWidget->winId()) で mpv を初期化してアタッチする。
+//   4. load(url) で再生を開始する。
 //
 // スレッド安全性:
 //   mpv の内部スレッドは wakeupCallback のみを通じて GUI スレッドと通信し、
@@ -39,6 +41,29 @@ public:
     // 任意の mpv コマンドを発行する。
     void command(const QStringList& args);
 
+    // ---- M4.0: プロパティ/オプション API ----------------------------------
+
+    // init 前専用オプションを積む（attach() 呼び出し時に mpv_initialize 前へ適用される）。
+    // attach() 完了後（init 済み）の呼び出しは no-op。
+    void setOption(const QString& name, const QString& value);
+
+    // 実行時プロパティを文字列で設定する（init 後専用）。
+    void setProperty(const QString& name, const QString& value);
+
+    // 実行時プロパティを bool フラグで設定する（MPV_FORMAT_FLAG）。
+    void setPropertyFlag(const QString& name, bool on);
+
+    // 実行時プロパティを double で設定する（MPV_FORMAT_DOUBLE）。
+    void setPropertyDouble(const QString& name, double v);
+
+    // プロパティを double で同期取得する。失敗時は 0.0 を返す。
+    double getPropertyDouble(const QString& name) const;
+
+    // プロパティを文字列で同期取得する。失敗時は空文字列を返す。
+    QString getPropertyString(const QString& name) const;
+
+    // -----------------------------------------------------------------------
+
 signals:
     // ファイルが読み込まれ再生が始まった。
     void fileLoaded();
@@ -56,6 +81,11 @@ signals:
     // demuxer-cache-time プロパティが変化した（キャッシュ内の総秒数）。
     void cacheTimeChanged(double seconds);
 
+    // M4.0: dwidth/dheight（アスペクト適用後の表示寸法）が変化した。
+    // 両方が正値になったとき、またはいずれかが変化したときに emit する。
+    // サブプラン横断決定 3: ズーム%・サイズプリセットの基準値として使う。
+    void videoSizeChanged(int w, int h);
+
 private:
     // mpv の wakeup callback（内部スレッドから呼ばれる）。
     // GUI スレッドの onWakeup() をキューイングするだけ。mpv API は呼ばない。
@@ -67,6 +97,14 @@ private slots:
 
 private:
     mpv_handle* mpv_{nullptr};
+
+    // M4.0: setOption() で積まれた init 前オプション（attach() 内で適用）。
+    struct PendingOption { QString name; QString value; };
+    QList<PendingOption> pendingOptions_;
+
+    // M4.0: dwidth/dheight の最終観測値（videoSizeChanged emit 用）。
+    int lastVideoW_{0};
+    int lastVideoH_{0};
 };
 
 }  // namespace yapcr::player

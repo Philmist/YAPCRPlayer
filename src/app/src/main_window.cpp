@@ -66,6 +66,11 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     connect(mpv_, &player::MpvBackend::logMessage,
             this, &MainWindow::onMpvLogMessage);
 
+    // M4.0: 映像ネイティブサイズ変化をデバッグログに出力する（M4.2 で本配線）
+    connect(mpv_, &player::MpvBackend::videoSizeChanged, this, [](int w, int h) {
+        qDebug() << "[mpv] videoSizeChanged:" << w << "x" << h;
+    });
+
     // セッションコントローラ
     session_ = new SessionController(mpv_, this);
     connect(session_, &SessionController::titleChanged,

@@ -38,6 +38,13 @@ bool MpvBackend::attach(quintptr wid) {
     if (!h) { return false; }
 
     try {
+        // M4.0: setOption() で積まれた init 前オプションを適用する。
+        for (const auto& opt : std::as_const(pendingOptions_)) {
+            checkMpvError(mpv_set_option_string(h,
+                opt.name.toUtf8().constData(),
+                opt.value.toUtf8().constData()));
+        }
+
         // 映像を Qt ウィジェットの HWND に埋め込む（show() 後に呼ぶこと）。
         // ref: mpv/client.h — wid は MPV_FORMAT_INT64 で渡す。
         auto widInt = static_cast<int64_t>(wid);
@@ -72,6 +79,10 @@ bool MpvBackend::attach(quintptr wid) {
         // watchdog 用プロパティ監視を登録する
         checkMpvError(mpv_observe_property(h, 0, "core-idle",          MPV_FORMAT_FLAG));
         checkMpvError(mpv_observe_property(h, 0, "demuxer-cache-time", MPV_FORMAT_DOUBLE));
+
+        // M4.0: 映像サイズ（アスペクト適用後）の監視
+        checkMpvError(mpv_observe_property(h, 0, "dwidth",  MPV_FORMAT_INT64));
+        checkMpvError(mpv_observe_property(h, 0, "dheight", MPV_FORMAT_INT64));
 
         // HTTP ライブストリームの lavf 自動再接続を試みる。
         // 注意: オプション名と値は mpv のバージョン・ビルドによって異なる可能性がある。
@@ -168,6 +179,22 @@ void MpvBackend::onWakeup() {
                     const double t = *static_cast<double*>(prop->data);
                     emit cacheTimeChanged(t);
                 }
+            } else if (QLatin1String(prop->name) == QLatin1String("dwidth")) {
+                // M4.0: アスペクト適用後の表示幅（横断決定 3）
+                if (prop->format == MPV_FORMAT_INT64) {
+                    lastVideoW_ = static_cast<int>(*static_cast<int64_t*>(prop->data));
+                    if (lastVideoW_ > 0 && lastVideoH_ > 0) {
+                        emit videoSizeChanged(lastVideoW_, lastVideoH_);
+                    }
+                }
+            } else if (QLatin1String(prop->name) == QLatin1String("dheight")) {
+                // M4.0: アスペクト適用後の表示高さ（横断決定 3）
+                if (prop->format == MPV_FORMAT_INT64) {
+                    lastVideoH_ = static_cast<int>(*static_cast<int64_t*>(prop->data));
+                    if (lastVideoW_ > 0 && lastVideoH_ > 0) {
+                        emit videoSizeChanged(lastVideoW_, lastVideoH_);
+                    }
+                }
             }
             break;
         }
@@ -184,5 +211,54 @@ void MpvBackend::onWakeup() {
         }
     }
 }
+
+// ---- M4.0: プロパティ/オプション API ----------------------------------------
+
+void MpvBackend::setOption(const QString& name, const QString& value) {
+    // init 済み（attach() 完了後）なら no-op。
+    if (mpv_) { return; }
+    pendingOptions_.append({name, value});
+}
+
+void MpvBackend::setProperty(const QString& name, const QString& value) {
+    if (!mpv_) { return; }
+    const QByteArray n = name.toUtf8();
+    const QByteArray v = value.toUtf8();
+    mpv_set_property_string(mpv_, n.constData(), v.constData());
+}
+
+void MpvBackend::setPropertyFlag(const QString& name, bool on) {
+    if (!mpv_) { return; }
+    const QByteArray n = name.toUtf8();
+    int val = on ? 1 : 0;
+    mpv_set_property(mpv_, n.constData(), MPV_FORMAT_FLAG, &val);
+}
+
+void MpvBackend::setPropertyDouble(const QString& name, double v) {
+    if (!mpv_) { return; }
+    const QByteArray n = name.toUtf8();
+    mpv_set_property(mpv_, n.constData(), MPV_FORMAT_DOUBLE, &v);
+}
+
+double MpvBackend::getPropertyDouble(const QString& name) const {
+    if (!mpv_) { return 0.0; }
+    const QByteArray n = name.toUtf8();
+    double val = 0.0;
+    mpv_get_property(mpv_, n.constData(), MPV_FORMAT_DOUBLE, &val);
+    return val;
+}
+
+QString MpvBackend::getPropertyString(const QString& name) const {
+    if (!mpv_) { return {}; }
+    const QByteArray n = name.toUtf8();
+    char* val = nullptr;
+    const int err = mpv_get_property(mpv_, n.constData(), MPV_FORMAT_STRING, &val);
+    if (err < 0 || !val) { return {}; }
+    QString result = QString::fromUtf8(val);
+    mpv_free(val);
+    return result;
+}
+
+// -----------------------------------------------------------------------------
 
 }  // namespace yapcr::player
