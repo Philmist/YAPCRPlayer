@@ -84,6 +84,12 @@ public:
     bool    isStop()      const;   // store_.count() >= loc_.thread.stop
     bool    isValid()     const;   // init 済みかつ URL 解析成功
 
+    // subject_ から最速の次スレ候補を選ぶ（M3.9）。
+    // 移植元: BBSOperator::getFastest() の薄いラッパ（内部実装は yapcr::bbs::selectFastest 自由関数）。
+    // key() が空（板URL cold-start）なら全スレから最速を選ぶ。
+    // 候補がなければ false を返す（out は書き換えない）。
+    bool selectFastest(ThreadInfo& out) const;
+
     // ---- 書き込み（非同期 POST）----
 
     // 書き込みリクエストを発行する。2ch 互換掲示板では確認ページが返る場合があり、

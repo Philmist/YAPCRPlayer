@@ -96,6 +96,10 @@ signals:
     // 書き込み結果。ok=true: 成功（入力欄をクリアする）、false: 失敗。
     void bbsPostFinished(bool ok);
 
+    // スレッドが自動切替された（M3.9）。newTitle: 新スレタイトル。
+    // MainWindow はこれを受けてレス一覧ペインをクリアする。
+    void bbsThreadChanged(const QString& newTitle);
+
 private slots:
     void onStreamResolved(const QString& streamUrl);
     void onStreamFailed();
@@ -108,8 +112,9 @@ private slots:
     void onBumpRequested();
     void onSupplyLost();
 
-    // BBS シグナル受信スロット（M3.6）
+    // BBS シグナル受信スロット（M3.6 / M3.9）
     void onBbsSettingLoaded();
+    void onBbsSubjectLoaded(const QList<yapcr::bbs::ThreadInfo>& threads);  // M3.9
     void onBbsDatLoaded(int newCount, bool notModified);
     void onBbsPostSucceeded();
     void onBbsPostFailed(const QString& reason);

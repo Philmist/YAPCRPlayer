@@ -9,6 +9,7 @@
 #include "bbs/dat.h"
 #include "bbs/dat_store.h"
 #include "bbs/extract.h"
+#include "bbs/fastest.h"
 #include "bbs/models.h"
 #include "bbs/post.h"
 #include "bbs/setting.h"
@@ -1717,6 +1718,116 @@ private slots:
         using namespace yapcr::bbs;
         QCOMPARE(nextPostAction(WriteResult::Error, 0, false), PostAction::Fail);
         QCOMPARE(nextPostAction(WriteResult::Error, 0, true),  PostAction::Fail);
+    }
+
+    // ======== calcSpeed（M3.9）========
+
+    void calcSpeed_normal()
+    {
+        using namespace yapcr::bbs;
+        // 100 レス / 2 日 = 50.0 レス/日
+        // key = epoch 秒 0、now = 172800（= 2 * 86400）
+        const double speed = calcSpeed(100, QStringLiteral("0"), 172800);
+        QCOMPARE(speed, 50.0);
+    }
+
+    void calcSpeed_zero_elapsed_returns_zero()
+    {
+        using namespace yapcr::bbs;
+        // elapsed == 0 → 0.0（ゼロ除算なし）
+        QCOMPARE(calcSpeed(100, QStringLiteral("1000"), 1000), 0.0);
+    }
+
+    void calcSpeed_negative_elapsed_returns_zero()
+    {
+        using namespace yapcr::bbs;
+        // 未来のスレ立て時刻（elapsed < 0）→ 0.0
+        QCOMPARE(calcSpeed(50, QStringLiteral("9999999999"), 1000), 0.0);
+    }
+
+    void calcSpeed_zero_count()
+    {
+        using namespace yapcr::bbs;
+        // レス 0 件 → 0.0
+        QCOMPARE(calcSpeed(0, QStringLiteral("0"), 86400), 0.0);
+    }
+
+    // ======== selectFastest（M3.9）========
+
+    // テスト用 ThreadInfo ビルダー
+    static yapcr::bbs::ThreadInfo makeThr(const QString& key, int count, double speed)
+    {
+        yapcr::bbs::ThreadInfo t;
+        t.key   = key;
+        t.count = count;
+        t.speed = speed;
+        return t;
+    }
+
+    void selectFastest_picks_max_speed()
+    {
+        using namespace yapcr::bbs;
+        // 2スレ候補: speed 10.0 vs 30.0 → 30.0 を選ぶ
+        const QList<ThreadInfo> subject = {
+            makeThr(QStringLiteral("100"), 100, 10.0),
+            makeThr(QStringLiteral("200"), 100, 30.0),
+        };
+        ThreadInfo out;
+        QVERIFY(selectFastest(subject, 1000, 0, out));
+        QCOMPARE(out.key, QStringLiteral("200"));
+    }
+
+    void selectFastest_excludes_full_threads()
+    {
+        using namespace yapcr::bbs;
+        // count >= stop（1000）の満了スレは除外される
+        const QList<ThreadInfo> subject = {
+            makeThr(QStringLiteral("100"), 1000, 50.0),   // 満了（除外）
+            makeThr(QStringLiteral("200"), 999,  30.0),   // 候補
+        };
+        ThreadInfo out;
+        QVERIFY(selectFastest(subject, 1000, 0, out));
+        QCOMPARE(out.key, QStringLiteral("200"));
+    }
+
+    void selectFastest_excludes_older_threads()
+    {
+        using namespace yapcr::bbs;
+        // curKeyEpoch=200 → key<=200 は除外
+        const QList<ThreadInfo> subject = {
+            makeThr(QStringLiteral("100"), 100, 50.0),   // 古い（除外）
+            makeThr(QStringLiteral("200"), 100, 50.0),   // 同 epoch（除外）
+            makeThr(QStringLiteral("300"), 100, 20.0),   // 新しい候補
+        };
+        ThreadInfo out;
+        QVERIFY(selectFastest(subject, 1000, 200, out));
+        QCOMPARE(out.key, QStringLiteral("300"));
+    }
+
+    void selectFastest_no_candidate_returns_false()
+    {
+        using namespace yapcr::bbs;
+        // 全スレが満了 → false、out は書き換えない
+        const QList<ThreadInfo> subject = {
+            makeThr(QStringLiteral("100"), 1000, 50.0),
+        };
+        ThreadInfo out;
+        out.key = QStringLiteral("sentinel");
+        QVERIFY(!selectFastest(subject, 1000, 0, out));
+        QCOMPARE(out.key, QStringLiteral("sentinel"));  // 書き換えなし
+    }
+
+    void selectFastest_cold_start_cur_epoch_zero()
+    {
+        using namespace yapcr::bbs;
+        // curKeyEpoch=0 → 全スレが対象（板URL cold-start）
+        const QList<ThreadInfo> subject = {
+            makeThr(QStringLiteral("100"), 100, 5.0),
+            makeThr(QStringLiteral("50"),  100, 50.0),   // epoch 50 < 100 でも ok
+        };
+        ThreadInfo out;
+        QVERIFY(selectFastest(subject, 1000, 0, out));
+        QCOMPARE(out.key, QStringLiteral("50"));
     }
 };
 

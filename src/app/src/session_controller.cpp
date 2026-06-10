@@ -20,6 +20,7 @@ SessionController::SessionController(player::MpvBackend* backend, QObject* paren
     // BBS セッション（M3.6）: 一度生成し bbsRefresh() で再 init する
     bbs_ = new bbs::BbsSession(this);
     connect(bbs_, &bbs::BbsSession::settingLoaded, this, &SessionController::onBbsSettingLoaded);
+    connect(bbs_, &bbs::BbsSession::subjectLoaded, this, &SessionController::onBbsSubjectLoaded);  // M3.9
     connect(bbs_, &bbs::BbsSession::datLoaded,     this, &SessionController::onBbsDatLoaded);
     connect(bbs_, &bbs::BbsSession::postSucceeded, this, &SessionController::onBbsPostSucceeded);
     connect(bbs_, &bbs::BbsSession::postFailed,    this, &SessionController::onBbsPostFailed);
@@ -287,10 +288,18 @@ void SessionController::bbsRefresh()
         return;
     }
     emit statusMessage(tr("BBS を取得中..."));
-    // setting と dat を並行取得する。setting 失敗（404/403 等）があっても
-    // dat 取得・表示を止めないよう分離する。
-    bbs_->loadSetting();
-    bbs_->loadDat();
+    // M3.9: 板URL（key 未確定）か スレURL（key 確定済み）で fetch 戦略を分岐する。
+    if (bbs_->key().isEmpty()) {
+        // cold-start: setting → subject（完了後に onBbsSubjectLoaded で最速スレ選択 → loadDat）
+        // stop を先に確定してから selectFastest を呼ぶため setting 先行・dat はここでは呼ばない。
+        bbs_->loadSetting();
+        // loadSubject は onBbsSettingLoaded 内で呼ぶ（stop 確定後に subject を取得する）
+    } else {
+        // 従来: setting と dat を並行取得する。setting 失敗（404/403 等）があっても
+        // dat 取得・表示を止めないよう分離する。
+        bbs_->loadSetting();
+        bbs_->loadDat();
+    }
 
     // M3.8: dat ポーリングタイマを（再）起動する。
     // init() のたびにタイマをリセットして間隔ズレを防ぐ。
@@ -320,8 +329,33 @@ void SessionController::bbsPost(const QString& message)
 
 void SessionController::onBbsSettingLoaded()
 {
-    // setting は bbsRefresh() で dat と並行取得済み。ここでは dat を再呼びしない。
-    // M3.8: bbs_->loadSubject() を呼びスレッド選択 UI に渡す。
+    // M3.9: 板URL cold-start（key 未確定）のとき、stop 確定後に subject を取得して最速スレを選ぶ。
+    // key 確定済みの場合（通常 fetch）は dat と並行でよいため何もしない。
+    if (bbs_->key().isEmpty()) {
+        bbs_->loadSubject();
+    }
+}
+
+// M3.9: subjectLoaded → 最速スレ選択 → スレ切替 → loadDat
+void SessionController::onBbsSubjectLoaded(const QList<bbs::ThreadInfo>&)
+{
+    bbs::ThreadInfo out;
+    if (!bbs_->selectFastest(out)) {
+        emit statusMessage(tr("BBS: 実況中スレが見つかりません（満了済みか対象外）"));
+        return;
+    }
+    if (out.key == bbs_->key()) {
+        // 既に最速スレに居る（起動時 key 有りで再 subject した場合）
+        return;
+    }
+    bbs_->change(out.key);
+    // タイトル帯更新と ResListPane クリアを促す
+    emit bbsThreadChanged(bbsThreadTitle());
+    bbs_->loadDat();
+    // ポーリングタイマをリセット（新スレに切替直後のズレ防止）
+    if (bbsPollTimer_) {
+        bbsPollTimer_->start();
+    }
 }
 
 void SessionController::onBbsDatLoaded(int newCount, bool notModified)
@@ -336,6 +370,13 @@ void SessionController::onBbsDatLoaded(int newCount, bool notModified)
     // M3.7: タイトル帯に最新のスレッドタイトルと件数を通知
     const QString title = bbsThreadTitle();
     emit bbsThreadInfoChanged(title, bbs_->count());
+    // M3.9: 満了追従 — stop > 0（実ロード済み）かつ現スレが満了した場合、
+    //       最新 subject を取得して最速次スレを選ぶ。onBbsSubjectLoaded が連鎖する。
+    // ※ parseSetting は n>0 のみ上書き・既定 1000 なので stop==0 誤発火はないが、
+    //   サブプランの明示ゲートを念のため維持する。
+    if (bbs_->stop() > 0 && bbs_->isStop()) {
+        bbs_->loadSubject();
+    }
 }
 
 void SessionController::onBbsPostSucceeded()
@@ -361,6 +402,11 @@ void SessionController::onBbsLoadFailed(bbs::BbsPhase phase, const QString& reas
         return QStringLiteral("unknown");
     }();
     emit statusMessage(tr("BBS 取得エラー [%1]: %2").arg(phaseStr, reason));
+    // M3.9: cold-start 時に setting が失敗しても subject 取得は続行する。
+    // キー未確定（board-URL 起動）かつ setting 失敗の場合、stop は既定 1000 のまま loadSubject へ進む。
+    if (phase == bbs::BbsPhase::Setting && bbs_ && bbs_->key().isEmpty()) {
+        bbs_->loadSubject();
+    }
 }
 
 // ---- BBS extract クエリ（M3.7）-------------------------------------------------

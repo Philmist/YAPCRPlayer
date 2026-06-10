@@ -134,6 +134,13 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
                     recentPopup_->hidePopup();
                 }
             });
+    // M3.9: スレッド自動切替時にレス一覧をクリアする（差分追記の破損防止）
+    connect(session_, &SessionController::bbsThreadChanged,
+            this, [this](const QString&) {
+                resListPane_->clearRes();
+                recentPopup_->hidePopup();
+            });
+
     connect(session_, &SessionController::bbsPostFinished,
             this, [this](bool ok) {
                 resInputBar_->setInputEnabled(true);

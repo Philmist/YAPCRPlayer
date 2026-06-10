@@ -3,6 +3,7 @@
 #include "bbs/board_url.h"
 #include "bbs/charset.h"
 #include "bbs/dat.h"
+#include "bbs/fastest.h"
 #include "bbs/post.h"
 #include "bbs/setting.h"
 #include "bbs/subject.h"
@@ -11,6 +12,7 @@
 
 #include <QDateTime>
 #include <QUrl>
+#include <algorithm>  // std::find_if
 
 namespace yapcr::bbs {
 
@@ -61,9 +63,18 @@ bool BbsSession::init(const QString& contactUrl)
 bool BbsSession::change(const QString& newKey)
 {
     if (!loc_.valid) { return false; }
-    loc_.thread.key   = newKey;
-    loc_.thread.title.clear();
-    loc_.thread.count = 0;
+    loc_.thread.key = newKey;
+    // subject_ にキーが在れば title/count を反映する（切替直後のタイトル帯退行を防ぐ）。
+    // 見つからなければ従来どおりクリア（移植元 BaseBBS.cpp:147-166 に倣う）。
+    const auto it = std::find_if(subject_.cbegin(), subject_.cend(),
+                                 [&newKey](const ThreadInfo& t){ return t.key == newKey; });
+    if (it != subject_.cend()) {
+        loc_.thread.title = it->title;
+        loc_.thread.count = it->count;
+    } else {
+        loc_.thread.title.clear();
+        loc_.thread.count = 0;
+    }
     store_.reset();
     datLastModified_.clear();
     return true;
@@ -123,6 +134,10 @@ void BbsSession::onSubjectFinished(const net::HttpResponse& resp)
     }
     const QString text = decodeFrom(resp.body, loc_.board.code);
     subject_ = parseSubject(text, loc_.type);
+    // M3.9: speed を充填する（parseSubject は pure で決定的のまま。速度は here で注入）。
+    for (ThreadInfo& t : subject_) {
+        t.speed = calcSpeed(t.count, t.key);
+    }
     emit subjectLoaded(subject_);
 }
 
@@ -192,6 +207,14 @@ int     BbsSession::stop()        const { return loc_.thread.stop; }
 int     BbsSession::count()       const { return store_.count(); }
 bool    BbsSession::isStop()      const { return store_.count() >= loc_.thread.stop; }
 bool    BbsSession::isValid()     const { return loc_.valid; }
+
+// M3.9: selectFastest — subject_ と現スレ key を自由関数に橋渡しする薄いラッパ
+bool BbsSession::selectFastest(ThreadInfo& out) const
+{
+    // key() が空（板URL cold-start）なら curKeyEpoch=0 → 全スレが対象（移植元 getKey 失敗 = org=0 と同義）
+    const qint64 curKeyEpoch = loc_.thread.key.isEmpty() ? 0LL : loc_.thread.key.toLongLong();
+    return yapcr::bbs::selectFastest(subject_, loc_.thread.stop, curKeyEpoch, out);
+}
 
 // ---------- 書き込み（M3.5） ----------
 
