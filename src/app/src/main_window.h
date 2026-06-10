@@ -60,6 +60,11 @@ private:
     // M4.1: 現在の currentFit_/currentAspectX_/Y_ を mpv に適用する。
     void applyFitMode();
 
+    // M4.2: 映像ウィジェットのサイズ固定・解除。
+    void applyZoom(int percent);               // ズーム%をネイティブサイズに掛けて固定
+    void applyAbsoluteSize(int w, int h);      // 映像領域をちょうど w×h に固定（バー除外正確ピクセル）
+    void releaseSizeFixed();                   // setFixedSize を解除して自由リサイズに戻す
+
     VideoHostWidget*         videoWidget_{nullptr};
     player::MpvBackend*      mpv_{nullptr};
     SessionController*       session_{nullptr};
@@ -86,6 +91,14 @@ private:
     FitMode       currentFit_{FitMode::Inscribe};
     int           currentAspectX_{0};
     int           currentAspectY_{0};
+
+    // M4.2: サイズモード（自由リサイズ / ズーム% / 絶対サイズ）
+    enum class SizeMode { Free, Zoom, Absolute };
+    QActionGroup* sizeModeGroup_{nullptr};
+    SizeMode      currentSizeMode_{SizeMode::Free};
+    int           currentZoom_{0};    // 選択中のズーム%（0 = 未選択）
+    int           lastVideoW_{0};     // videoSizeChanged で更新されるネイティブ映像幅
+    int           lastVideoH_{0};     // videoSizeChanged で更新されるネイティブ映像高さ
 
     // openMedia が attach より先に呼ばれた場合に備えて引数を保持する
     struct PendingMedia {

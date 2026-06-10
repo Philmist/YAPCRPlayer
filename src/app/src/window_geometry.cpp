@@ -21,4 +21,28 @@ QSize applyAspectOverride(int nativeW, int nativeH, int aspectX, int aspectY) {
     return QSize(w, nativeH);
 }
 
+// ---- M4.2: プリセットテーブル ---------------------------------------------------
+
+QList<int> zoomPresets() {
+    // ハードコード既定。M5: config化
+    return {25, 50, 75, 100, 125, 150, 200};
+}
+
+QList<SizePreset> sizePresets() {
+    // ハードコード既定。M5: config化
+    // 移植元: WindowConfig::size (SerializeDisplay.h:64-86) の代表値縮約セット
+    return {
+        // 16:9 系
+        { "640x360",    640,  360 },
+        { "854x480",    854,  480 },
+        { "960x540",    960,  540 },
+        { "1280x720",  1280,  720 },
+        { "1920x1080", 1920, 1080 },
+        // 4:3 系
+        { "640x480",    640,  480 },
+        { "800x600",    800,  600 },
+        { "1024x768",  1024,  768 },
+    };
+}
+
 }  // namespace yapcr::app

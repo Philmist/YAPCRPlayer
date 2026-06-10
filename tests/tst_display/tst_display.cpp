@@ -5,12 +5,15 @@
 
 // M4.0 — 窓サイズ純計算ヘルパの単体テスト
 // M4.1 — フィット/アスペクトモード mpv オプション対応表の単体テスト
+// M4.2 — ズーム%/絶対サイズ プリセットテーブルの単体テスト
 //
 // テスト対象:
 //   yapcr::app::videoTargetForZoom   — ズーム%を適用した映像目標ピクセルサイズ
 //   yapcr::app::applyAspectOverride  — 明示アスペクト比を適用した表示サイズ
 //   yapcr::app::fitModeToMpvProps    — フィットモード→mpv プロパティ完全集合
 //   yapcr::app::aspectPresets        — アスペクトプリセット一覧
+//   yapcr::app::zoomPresets          — ズーム% プリセット一覧
+//   yapcr::app::sizePresets          — 絶対サイズ プリセット一覧
 //
 // mpv 実呼び出し・ウィンドウジオメトリ・UI 描画は対象外（手動 E2E）。
 
@@ -20,6 +23,9 @@ using yapcr::app::FitMode;
 using yapcr::app::MpvProp;
 using yapcr::app::fitModeToMpvProps;
 using yapcr::app::aspectPresets;
+using yapcr::app::zoomPresets;
+using yapcr::app::SizePreset;
+using yapcr::app::sizePresets;
 
 class TstDisplay : public QObject {
     Q_OBJECT
@@ -204,6 +210,45 @@ private slots:
         QCOMPARE(presets[2].x,  5);  QCOMPARE(presets[2].y,   4);
         QCOMPARE(presets[3].x, 235); QCOMPARE(presets[3].y, 100);
         QCOMPARE(presets[4].x, 185); QCOMPARE(presets[4].y, 100);
+    }
+
+    // ---- M4.2: プリセットテーブル -------------------------------------------
+
+    // zoomPresets() が {25,50,75,100,125,150,200} の 7 件（順序込み）
+    void zoom_presets_table() {
+        const auto z = zoomPresets();
+        QCOMPARE(z.size(), 7);
+        QCOMPARE(z[0], 25);
+        QCOMPARE(z[1], 50);
+        QCOMPARE(z[2], 75);
+        QCOMPARE(z[3], 100);
+        QCOMPARE(z[4], 125);
+        QCOMPARE(z[5], 150);
+        QCOMPARE(z[6], 200);
+    }
+
+    // sizePresets() が 8 件（16:9 系 5 + 4:3 系 3）で各 w/h が正値かつ代表値と一致する
+    void size_presets_table() {
+        const auto s = sizePresets();
+        QCOMPARE(s.size(), 8);
+
+        // 16:9 系（全エントリで幅 > 高さ かつアスペクト比が 16:9 に近い）
+        QCOMPARE(s[0].w,  640); QCOMPARE(s[0].h,  360);
+        QCOMPARE(s[1].w,  854); QCOMPARE(s[1].h,  480);
+        QCOMPARE(s[2].w,  960); QCOMPARE(s[2].h,  540);
+        QCOMPARE(s[3].w, 1280); QCOMPARE(s[3].h,  720);
+        QCOMPARE(s[4].w, 1920); QCOMPARE(s[4].h, 1080);
+
+        // 4:3 系
+        QCOMPARE(s[5].w,  640); QCOMPARE(s[5].h,  480);
+        QCOMPARE(s[6].w,  800); QCOMPARE(s[6].h,  600);
+        QCOMPARE(s[7].w, 1024); QCOMPARE(s[7].h,  768);
+
+        // 全エントリが正値
+        for (const auto& p : s) {
+            QVERIFY(p.w > 0);
+            QVERIFY(p.h > 0);
+        }
     }
 };
 

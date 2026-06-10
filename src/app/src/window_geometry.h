@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QList>
 #include <QSize>
 
 namespace yapcr::app {
@@ -30,5 +31,19 @@ QSize videoTargetForZoom(int nativeW, int nativeH, int zoomPercent);
 //
 // 移植元: PCRPlayer/Util.cpp getAspectRect() の算術を QSize で再実装。
 QSize applyAspectOverride(int nativeW, int nativeH, int aspectX, int aspectY);
+
+// ---- M4.2: プリセットテーブル（UI 非依存・単体テスト対象） -------------------
+
+// ズーム% プリセット（ハードコード既定。// M5: config化）。
+//   移植元 WindowConfig::zoom (SerializeDisplay.h:55-61)。
+//   返り値: {25, 50, 75, 100, 125, 150, 200}
+QList<int> zoomPresets();
+
+// 絶対サイズ プリセット（ハードコード既定。// M5: config化）。
+//   移植元 WindowConfig::size (SerializeDisplay.h:64-86) の代表値縮約セット。
+//   16:9 系: 640×360 / 854×480 / 960×540 / 1280×720 / 1920×1080
+//   4:3  系: 640×480 / 800×600 / 1024×768
+struct SizePreset { const char* label; int w; int h; };
+QList<SizePreset> sizePresets();
 
 }  // namespace yapcr::app

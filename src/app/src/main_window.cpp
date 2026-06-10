@@ -9,6 +9,7 @@
 #include "bbs/models.h"
 #include "player/mpv_backend.h"
 #include "common/version.h"
+#include "window_geometry.h"  // M4.2: videoTargetForZoom / zoomPresets / sizePresets
 
 #include <QAction>
 #include <QActionGroup>
@@ -70,9 +71,14 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     connect(mpv_, &player::MpvBackend::logMessage,
             this, &MainWindow::onMpvLogMessage);
 
-    // M4.0: 映像ネイティブサイズ変化をデバッグログに出力する（M4.2 で本配線）
-    connect(mpv_, &player::MpvBackend::videoSizeChanged, this, [](int w, int h) {
+    // M4.2: 映像ネイティブサイズを保持し、ズーム%選択中は変化に追従して再適用する。
+    connect(mpv_, &player::MpvBackend::videoSizeChanged, this, [this](int w, int h) {
         qDebug() << "[mpv] videoSizeChanged:" << w << "x" << h;
+        lastVideoW_ = w;
+        lastVideoH_ = h;
+        if (currentSizeMode_ == SizeMode::Zoom && currentZoom_ > 0) {
+            applyZoom(currentZoom_);
+        }
     });
 
     // M4.1: フィットモードの初期値を内接（Inscribe）に設定する。
@@ -251,6 +257,58 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
             addAspect(QString::fromLatin1(preset.label),
                       FitMode::AspectOverride, preset.x, preset.y);
         }
+
+        viewMenu->addSeparator();
+
+        // ---- M4.2: サイズ固定（ズーム% / 絶対サイズ）----
+        // フィット/アスペクト（displayModeGroup_）とは別軸の排他グループ。
+        sizeModeGroup_ = new QActionGroup(this);
+        sizeModeGroup_->setExclusive(true);
+
+        // 「自由リサイズ（固定解除）」— 初期選択
+        {
+            QAction* actFree = viewMenu->addAction(tr("サイズ固定を解除（自由リサイズ）"));
+            actFree->setCheckable(true);
+            actFree->setChecked(true);
+            sizeModeGroup_->addAction(actFree);
+            connect(actFree, &QAction::triggered, this, [this] {
+                currentSizeMode_ = SizeMode::Free;
+                currentZoom_     = 0;
+                releaseSizeFixed();
+            });
+        }
+
+        // 「ズーム%」サブメニュー（ラジオ）: プリセットをループして生成
+        {
+            QMenu* zoomMenu = viewMenu->addMenu(tr("ズーム(&Z)"));
+            for (int percent : zoomPresets()) {
+                QAction* act = zoomMenu->addAction(QStringLiteral("%1%").arg(percent));
+                act->setCheckable(true);
+                sizeModeGroup_->addAction(act);
+                connect(act, &QAction::triggered, this, [this, percent] {
+                    currentSizeMode_ = SizeMode::Zoom;
+                    currentZoom_     = percent;
+                    applyZoom(percent);
+                });
+            }
+        }
+
+        // 「絶対サイズ」サブメニュー（ラジオ）: プリセットをループして生成
+        {
+            QMenu* sizeMenu = viewMenu->addMenu(tr("絶対サイズ(&S)"));
+            for (const auto& preset : sizePresets()) {
+                QAction* act = sizeMenu->addAction(QString::fromLatin1(preset.label));
+                act->setCheckable(true);
+                sizeModeGroup_->addAction(act);
+                const int pw = preset.w;
+                const int ph = preset.h;
+                connect(act, &QAction::triggered, this, [this, pw, ph] {
+                    currentSizeMode_ = SizeMode::Absolute;
+                    currentZoom_     = 0;
+                    applyAbsoluteSize(pw, ph);
+                });
+            }
+        }
     }
 
     // ウィンドウタイトルの初期値
@@ -326,6 +384,34 @@ void MainWindow::applyFitMode()
     for (const auto& p : props) {
         mpv_->setProperty(p.name, p.value);
     }
+}
+
+// M4.2: ズーム%をネイティブ映像サイズに掛けた目標ピクセルで videoWidget_ を固定する。
+// lastVideoW_/H_ が未取得（0）のときは videoTargetForZoom が QSize(0,0) を返すため no-op。
+void MainWindow::applyZoom(int percent)
+{
+    const QSize t = videoTargetForZoom(lastVideoW_, lastVideoH_, percent);
+    if (t.isEmpty()) { return; }   // native 未取得 → no-op（M4.0 の既存ガードを活用）
+    videoWidget_->setFixedSize(t);
+    adjustSize();
+}
+
+// M4.2: 映像領域をちょうど w×h ピクセルに固定する（バー除外の正確ピクセル = OBS タイル配信用）。
+// ウィンドウ全体はタイトル帯など下部バーの高さ分だけ大きくなる（Qt レイアウト自動加算）。
+void MainWindow::applyAbsoluteSize(int w, int h)
+{
+    if (w <= 0 || h <= 0) { return; }
+    videoWidget_->setFixedSize(w, h);
+    adjustSize();
+}
+
+// M4.2: setFixedSize を解除して自由リサイズに戻す。
+// setMinimumSize で下限のみ復元し、setMaximumSize でブロックを撤去する。
+void MainWindow::releaseSizeFixed()
+{
+    videoWidget_->setMinimumSize(640, 360);
+    videoWidget_->setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
+    adjustSize();
 }
 
 }  // namespace yapcr::app
