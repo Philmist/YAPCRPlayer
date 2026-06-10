@@ -75,6 +75,11 @@ private:
     void leaveFullScreen();   // showNormal() → バー復帰 → サイズモード再適用
     void reapplySizeMode();   // currentSizeMode_ に応じて applyZoom/applyAbsoluteSize/releaseSizeFixed を呼ぶ
 
+    // M4.4: スナップショット保存・フォルダ表示。
+    void    takeSnapshot();                // S キー / メニューでスナップショットを保存
+    void    openSnapshotFolder();          // 保存フォルダをエクスプローラで開く
+    QString snapshotDirectory() const;    // 保存先（Pictures/YAPCRPlayer）。// M5: config化
+
     VideoHostWidget*         videoWidget_{nullptr};
     player::MpvBackend*      mpv_{nullptr};
     SessionController*       session_{nullptr};
@@ -111,7 +116,7 @@ private:
     int           lastVideoH_{0};     // videoSizeChanged で更新されるネイティブ映像高さ
 
     // M4.3: 全画面
-    QAction* actFullScreen_{nullptr};  // チェック可能・全画面状態に同期
+    QAction* actFullScreen_{nullptr};    // チェック可能・全画面状態に同期
     int      lastAbsW_{0};             // 絶対サイズ再適用用（applyAbsoluteSize で記録）
     int      lastAbsH_{0};
     struct FullScreenState {           // 全画面入場前のバー表示状態を退避
@@ -120,7 +125,11 @@ private:
         bool titleBar{true};    // boardTitleBar_
         bool resDock{false};
         bool inputDock{false};
-    } savedBars_;                // // M5: config化（全画面時のバー表示有無）
+    } savedBars_;                // M5: config化（全画面時のバー表示有無）
+
+    // M4.4: スナップショット
+    QAction* actSnapshot_{nullptr};        // 「スナップショット保存」アクション
+    QAction* actSnapshotFolder_{nullptr};  // 「保存フォルダを開く」アクション
 
     // openMedia が attach より先に呼ばれた場合に備えて引数を保持する
     struct PendingMedia {

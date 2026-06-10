@@ -2,10 +2,12 @@
 
 #include "window_geometry.h"
 #include "display_modes.h"
+#include "snapshot_filename.h"  // M4.4
 
 // M4.0 — 窓サイズ純計算ヘルパの単体テスト
 // M4.1 — フィット/アスペクトモード mpv オプション対応表の単体テスト
 // M4.2 — ズーム%/絶対サイズ プリセットテーブルの単体テスト
+// M4.4 — スナップショットファイル名生成の単体テスト
 //
 // テスト対象:
 //   yapcr::app::videoTargetForZoom   — ズーム%を適用した映像目標ピクセルサイズ
@@ -14,6 +16,7 @@
 //   yapcr::app::aspectPresets        — アスペクトプリセット一覧
 //   yapcr::app::zoomPresets          — ズーム% プリセット一覧
 //   yapcr::app::sizePresets          — 絶対サイズ プリセット一覧
+//   yapcr::app::snapshotFilename     — 日時ベースのスナップショットファイル名生成
 //
 // mpv 実呼び出し・ウィンドウジオメトリ・UI 描画は対象外（手動 E2E）。
 
@@ -26,6 +29,8 @@ using yapcr::app::aspectPresets;
 using yapcr::app::zoomPresets;
 using yapcr::app::SizePreset;
 using yapcr::app::sizePresets;
+using yapcr::app::snapshotFilename;
+using yapcr::app::SnapshotFormat;
 
 class TstDisplay : public QObject {
     Q_OBJECT
@@ -249,6 +254,38 @@ private slots:
             QVERIFY(p.w > 0);
             QVERIFY(p.h > 0);
         }
+    }
+
+    // ---- M4.4: snapshotFilename -----------------------------------------------
+
+    // 固定日時 → 命名規則どおりのファイル名になる
+    void snapshot_filename_basic() {
+        // 2026-06-10 15:30:12.004
+        const QDateTime dt(QDate(2026, 6, 10), QTime(15, 30, 12, 4));
+        QCOMPARE(snapshotFilename(dt),                    QStringLiteral("20260610_153012_004.png"));
+        QCOMPARE(snapshotFilename(dt, SnapshotFormat::Png), QStringLiteral("20260610_153012_004.png"));
+        QCOMPARE(snapshotFilename(dt, SnapshotFormat::Jpg), QStringLiteral("20260610_153012_004.jpg"));
+        QCOMPARE(snapshotFilename(dt, SnapshotFormat::Bmp), QStringLiteral("20260610_153012_004.bmp"));
+    }
+
+    // ゼロ埋め: 1 桁の月/日/時/分/秒、ミリ秒はすべて 3 桁になる
+    void snapshot_filename_zero_padding() {
+        // 月=1, 日=5, 時=9, 分=3, 秒=7, ms=42
+        const QDateTime dt(QDate(2026, 1, 5), QTime(9, 3, 7, 42));
+        // 年=2026, 月=01, 日=05, 時=09, 分=03, 秒=07, ms=042
+        QCOMPARE(snapshotFilename(dt), QStringLiteral("20260105_090307_042.png"));
+    }
+
+    // ミリ秒 = 0 → "_000"
+    void snapshot_filename_zero_ms() {
+        const QDateTime dt(QDate(2026, 12, 31), QTime(23, 59, 59, 0));
+        QCOMPARE(snapshotFilename(dt), QStringLiteral("20261231_235959_000.png"));
+    }
+
+    // ミリ秒 = 999 → "_999"
+    void snapshot_filename_max_ms() {
+        const QDateTime dt(QDate(2000, 1, 1), QTime(0, 0, 0, 999));
+        QCOMPARE(snapshotFilename(dt), QStringLiteral("20000101_000000_999.png"));
     }
 };
 

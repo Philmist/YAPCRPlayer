@@ -18,6 +18,8 @@ qt_add_executable(YAPCRPlayer WIN32
     src/window_geometry.h
     src/display_modes.cpp      # M4.1: フィット/アスペクトモード mpv 対応付け
     src/display_modes.h
+    src/snapshot_filename.cpp  # M4.4: スナップショットファイル名生成（純関数）
+    src/snapshot_filename.h
 )
 
 target_link_libraries(YAPCRPlayer PRIVATE

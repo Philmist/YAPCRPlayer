@@ -9,20 +9,26 @@
 #include "bbs/models.h"
 #include "player/mpv_backend.h"
 #include "common/version.h"
-#include "window_geometry.h"  // M4.2: videoTargetForZoom / zoomPresets / sizePresets
+#include "window_geometry.h"   // M4.2: videoTargetForZoom / zoomPresets / sizePresets
+#include "snapshot_filename.h" // M4.4: snapshotFilename
 
 #include <QAction>
 #include <QActionGroup>
 #include <QCursor>
+#include <QDateTime>
 #include <QDebug>
+#include <QDesktopServices>
+#include <QDir>
 #include <QDockWidget>
 #include <QKeyEvent>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMouseEvent>
 #include <QShowEvent>
+#include <QStandardPaths>
 #include <QStatusBar>
 #include <QString>
+#include <QUrl>
 #include <QVBoxLayout>
 #include <QtGlobal>
 
@@ -317,6 +323,13 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
         actFullScreen_ = viewMenu->addAction(tr("全画面(&F)ull Screen\tF"));
         actFullScreen_->setCheckable(true);
         connect(actFullScreen_, &QAction::triggered, this, [this] { toggleFullScreen(); });
+
+        // M4.4: スナップショット（M5: config化 — 保存先・形式・品質）
+        viewMenu->addSeparator();
+        actSnapshot_ = viewMenu->addAction(tr("スナップショット保存 (&S)napshot\tS"));
+        connect(actSnapshot_, &QAction::triggered, this, [this] { takeSnapshot(); });
+        actSnapshotFolder_ = viewMenu->addAction(tr("保存フォルダを開く"));
+        connect(actSnapshotFolder_, &QAction::triggered, this, [this] { openSnapshotFolder(); });
     }
 
     // ウィンドウタイトルの初期値
@@ -497,8 +510,8 @@ void MainWindow::reapplySizeMode()
     }
 }
 
-// F キー: 全画面トグル。Esc キー: 全画面中のみ解除。
-// resInputBar_ の入力欄にフォーカスがある間はそちらが消費するため、書き込み中はトグルされない（望ましい）。
+// F キー: 全画面トグル。Esc キー: 全画面中のみ解除。S キー: スナップショット保存。
+// resInputBar_ の入力欄にフォーカスがある間はそちらが消費するため、書き込み中は誤爆しない（望ましい）。
 void MainWindow::keyPressEvent(QKeyEvent* event)
 {
     if (event->key() == Qt::Key_F) {
@@ -507,6 +520,10 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
     }
     if (event->key() == Qt::Key_Escape && isFullScreen()) {
         leaveFullScreen();
+        return;
+    }
+    if (event->key() == Qt::Key_S) {        // M4.4: スナップショット
+        takeSnapshot();
         return;
     }
     QMainWindow::keyPressEvent(event);
@@ -519,6 +536,39 @@ void MainWindow::mouseDoubleClickEvent(QMouseEvent* event)
 {
     toggleFullScreen();
     QMainWindow::mouseDoubleClickEvent(event);
+}
+
+// M4.4: スナップショット ——————————————————————————————————————————————————————
+
+// スナップショットの保存先ディレクトリを返す。ディレクトリ自体は作成しない。
+// ハードコード既定（Pictures/YAPCRPlayer）。// M5: config化（保存先フォルダ）
+QString MainWindow::snapshotDirectory() const
+{
+    const QString base =
+        QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
+    return base + QStringLiteral("/YAPCRPlayer");
+}
+
+// 現在の映像フレームを OSD/字幕なしの素フレームで保存する。
+// video フラグ = OSD/字幕なし・元解像度。無映像時は mpv が書き出しに失敗するが M4 ではガードしない。
+// 形式 PNG 固定。// M5: config化（形式・JPEG 品質）
+void MainWindow::takeSnapshot()
+{
+    const QString dir  = snapshotDirectory();
+    QDir().mkpath(dir);  // 保存先フォルダが無ければ自動作成
+    const QString path = dir + QStringLiteral("/")
+                       + snapshotFilename(QDateTime::currentDateTime(), SnapshotFormat::Png);
+    // screenshot-to-file <path> <flags>: 拡張子から形式を自動判定（.png→PNG）
+    mpv_->command({ QStringLiteral("screenshot-to-file"), path, QStringLiteral("video") });
+    onStatusMessage(tr("スナップショットを保存: %1").arg(path));
+}
+
+// 保存フォルダをエクスプローラで開く。フォルダが無ければ作成してから開く。
+void MainWindow::openSnapshotFolder()
+{
+    const QString dir = snapshotDirectory();
+    QDir().mkpath(dir);
+    QDesktopServices::openUrl(QUrl::fromLocalFile(dir));
 }
 
 }  // namespace yapcr::app
