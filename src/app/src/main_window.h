@@ -7,6 +7,8 @@
 class QAction;
 class QActionGroup;
 class QDockWidget;
+class QKeyEvent;
+class QMouseEvent;
 
 namespace yapcr::player {
 class MpvBackend;
@@ -47,6 +49,8 @@ public:
 
 protected:
     void showEvent(QShowEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;           // M4.3: F=全画面トグル, Esc=全画面解除
+    void mouseDoubleClickEvent(QMouseEvent* event) override; // M4.3: ダブルクリックで全画面トグル
 
 private slots:
     void onTitleChanged(const QString& title);
@@ -64,6 +68,12 @@ private:
     void applyZoom(int percent);               // ズーム%をネイティブサイズに掛けて固定
     void applyAbsoluteSize(int w, int h);      // 映像領域をちょうど w×h に固定（バー除外正確ピクセル）
     void releaseSizeFixed();                   // setFixedSize を解除して自由リサイズに戻す
+
+    // M4.3: 全画面トグル・遷移。
+    void toggleFullScreen();  // メニュー/F キー/ダブルクリックの共通エントリ
+    void enterFullScreen();   // バー退避 → サイズ固定一時解除 → showFullScreen()
+    void leaveFullScreen();   // showNormal() → バー復帰 → サイズモード再適用
+    void reapplySizeMode();   // currentSizeMode_ に応じて applyZoom/applyAbsoluteSize/releaseSizeFixed を呼ぶ
 
     VideoHostWidget*         videoWidget_{nullptr};
     player::MpvBackend*      mpv_{nullptr};
@@ -99,6 +109,18 @@ private:
     int           currentZoom_{0};    // 選択中のズーム%（0 = 未選択）
     int           lastVideoW_{0};     // videoSizeChanged で更新されるネイティブ映像幅
     int           lastVideoH_{0};     // videoSizeChanged で更新されるネイティブ映像高さ
+
+    // M4.3: 全画面
+    QAction* actFullScreen_{nullptr};  // チェック可能・全画面状態に同期
+    int      lastAbsW_{0};             // 絶対サイズ再適用用（applyAbsoluteSize で記録）
+    int      lastAbsH_{0};
+    struct FullScreenState {           // 全画面入場前のバー表示状態を退避
+        bool menuBar{true};
+        bool statusBar{true};
+        bool titleBar{true};    // boardTitleBar_
+        bool resDock{false};
+        bool inputDock{false};
+    } savedBars_;                // // M5: config化（全画面時のバー表示有無）
 
     // openMedia が attach より先に呼ばれた場合に備えて引数を保持する
     struct PendingMedia {

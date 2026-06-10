@@ -16,8 +16,10 @@
 #include <QCursor>
 #include <QDebug>
 #include <QDockWidget>
+#include <QKeyEvent>
 #include <QMenu>
 #include <QMenuBar>
+#include <QMouseEvent>
 #include <QShowEvent>
 #include <QStatusBar>
 #include <QString>
@@ -309,6 +311,12 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
                 });
             }
         }
+
+        // M4.3: 全画面（M5: config化 — 全画面時のバー表示有無）
+        viewMenu->addSeparator();
+        actFullScreen_ = viewMenu->addAction(tr("全画面(&F)ull Screen\tF"));
+        actFullScreen_->setCheckable(true);
+        connect(actFullScreen_, &QAction::triggered, this, [this] { toggleFullScreen(); });
     }
 
     // ウィンドウタイトルの初期値
@@ -404,6 +412,7 @@ void MainWindow::applyZoom(int percent)
 void MainWindow::applyAbsoluteSize(int w, int h)
 {
     if (w <= 0 || h <= 0) { return; }
+    lastAbsW_ = w; lastAbsH_ = h;    // M4.3: 全画面復帰時の再適用用に保持
     videoWidget_->setFixedSize(w, h);
     centralWidget()->layout()->activate();
     adjustSize();
@@ -416,6 +425,100 @@ void MainWindow::releaseSizeFixed()
     videoWidget_->setMinimumSize(640, 360);
     videoWidget_->setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
     adjustSize();
+}
+
+// M4.3: 全画面トグル ———————————————————————————————————————————————————————
+
+// F キー / メニュー / ダブルクリックの共通エントリ。
+void MainWindow::toggleFullScreen()
+{
+    if (isFullScreen()) { leaveFullScreen(); } else { enterFullScreen(); }
+}
+
+// 全画面入場: バーを退避 → M4.2 サイズ固定を一時解除 → showFullScreen()。
+// currentSizeMode_ は変更しない（状態保持）。
+void MainWindow::enterFullScreen()
+{
+    // 入場前のバー表示状態を退避（復帰時に正確に戻すため）
+    savedBars_ = {
+        menuBar()->isVisible(),
+        statusBar()->isVisible(),
+        boardTitleBar_->isVisible(),
+        resDock_->isVisible(),
+        inputDock_->isVisible()
+    };
+
+    // クリーンな映像（Q5=A）: 全バー/ドックを隠す。// M5: config化（全画面時のバー表示有無）
+    menuBar()->hide();
+    statusBar()->hide();
+    boardTitleBar_->hide();
+    resDock_->hide();
+    inputDock_->hide();
+
+    // M4.2 のサイズ固定を一時解除（固定箱のまま全画面にすると映像が画面を埋めない）。
+    // currentSizeMode_ は保持し、leaveFullScreen() で再適用する。
+    videoWidget_->setMinimumSize(640, 360);
+    videoWidget_->setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
+
+    showFullScreen();
+    if (actFullScreen_) { actFullScreen_->setChecked(true); }
+}
+
+// 全画面復帰: showNormal() → バーを退避状態に戻す → サイズモードを再適用。
+void MainWindow::leaveFullScreen()
+{
+    showNormal();
+
+    // バーを入場前の状態に復帰する
+    menuBar()->setVisible(savedBars_.menuBar);
+    statusBar()->setVisible(savedBars_.statusBar);
+    boardTitleBar_->setVisible(savedBars_.titleBar);
+    resDock_->setVisible(savedBars_.resDock);
+    inputDock_->setVisible(savedBars_.inputDock);
+
+    // 選択中のサイズモードを再適用（ズーム/絶対サイズの固定を元に戻す）
+    reapplySizeMode();
+    if (actFullScreen_) { actFullScreen_->setChecked(false); }
+}
+
+// currentSizeMode_ に応じて適切なサイズ適用関数を呼ぶ。
+void MainWindow::reapplySizeMode()
+{
+    switch (currentSizeMode_) {
+        case SizeMode::Zoom:
+            applyZoom(currentZoom_);
+            break;
+        case SizeMode::Absolute:
+            applyAbsoluteSize(lastAbsW_, lastAbsH_);
+            break;
+        case SizeMode::Free:
+            releaseSizeFixed();
+            break;
+    }
+}
+
+// F キー: 全画面トグル。Esc キー: 全画面中のみ解除。
+// resInputBar_ の入力欄にフォーカスがある間はそちらが消費するため、書き込み中はトグルされない（望ましい）。
+void MainWindow::keyPressEvent(QKeyEvent* event)
+{
+    if (event->key() == Qt::Key_F) {
+        toggleFullScreen();
+        return;
+    }
+    if (event->key() == Qt::Key_Escape && isFullScreen()) {
+        leaveFullScreen();
+        return;
+    }
+    QMainWindow::keyPressEvent(event);
+}
+
+// ダブルクリックで全画面トグル。
+// 注意: --wid 埋め込みでは mpv が映像領域に子 HWND を置くため、映像上のダブルクリックは
+//       Qt に届かない場合がある（ベストエフォート）。非映像領域（タイトル帯など）では届く。
+void MainWindow::mouseDoubleClickEvent(QMouseEvent* event)
+{
+    toggleFullScreen();
+    QMainWindow::mouseDoubleClickEvent(event);
 }
 
 }  // namespace yapcr::app
