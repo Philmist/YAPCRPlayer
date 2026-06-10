@@ -393,6 +393,9 @@ void MainWindow::applyZoom(int percent)
     const QSize t = videoTargetForZoom(lastVideoW_, lastVideoH_, percent);
     if (t.isEmpty()) { return; }   // native 未取得 → no-op（M4.0 の既存ガードを活用）
     videoWidget_->setFixedSize(t);
+    // setFixedSize 直後は QMainWindowLayout のサイズヒントがキャッシュを返すため、
+    // 縮小方向への adjustSize() が効かない。activate() で強制再計算してから縮める。
+    centralWidget()->layout()->activate();
     adjustSize();
 }
 
@@ -402,6 +405,7 @@ void MainWindow::applyAbsoluteSize(int w, int h)
 {
     if (w <= 0 || h <= 0) { return; }
     videoWidget_->setFixedSize(w, h);
+    centralWidget()->layout()->activate();
     adjustSize();
 }
 
