@@ -16,6 +16,8 @@ qt_add_executable(YAPCRPlayer WIN32
     src/board_title_bar.h
     src/window_geometry.cpp    # M4.0: 窓サイズ純計算ヘルパ
     src/window_geometry.h
+    src/display_modes.cpp      # M4.1: フィット/アスペクトモード mpv 対応付け
+    src/display_modes.h
 )
 
 target_link_libraries(YAPCRPlayer PRIVATE

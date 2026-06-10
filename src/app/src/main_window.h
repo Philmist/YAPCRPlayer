@@ -2,7 +2,10 @@
 
 #include <QMainWindow>
 
+#include "display_modes.h"  // M4.1: FitMode
+
 class QAction;
+class QActionGroup;
 class QDockWidget;
 
 namespace yapcr::player {
@@ -54,6 +57,9 @@ private:
     // mpv を VideoHostWidget にアタッチする。show() 後に一度だけ呼ぶ。
     void attachMpv();
 
+    // M4.1: 現在の currentFit_/currentAspectX_/Y_ を mpv に適用する。
+    void applyFitMode();
+
     VideoHostWidget*         videoWidget_{nullptr};
     player::MpvBackend*      mpv_{nullptr};
     SessionController*       session_{nullptr};
@@ -74,6 +80,12 @@ private:
     // M3.7: 掲示板タイトル帯 + 直近レスポップアップ（映像上オーバーレイ）
     BoardTitleBar* boardTitleBar_{nullptr};
     ResPopup*      recentPopup_{nullptr};
+
+    // M4.1: フィット/アスペクトモード状態
+    QActionGroup* displayModeGroup_{nullptr};
+    FitMode       currentFit_{FitMode::Inscribe};
+    int           currentAspectX_{0};
+    int           currentAspectY_{0};
 
     // openMedia が attach より先に呼ばれた場合に備えて引数を保持する
     struct PendingMedia {

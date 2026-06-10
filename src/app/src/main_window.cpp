@@ -11,6 +11,7 @@
 #include "common/version.h"
 
 #include <QAction>
+#include <QActionGroup>
 #include <QCursor>
 #include <QDebug>
 #include <QDockWidget>
@@ -54,6 +55,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     mpv_ = new player::MpvBackend(this);
     connect(mpv_, &player::MpvBackend::fileLoaded, this, [this] {
         statusBar()->showMessage(tr("再生開始"));
+        // M4.1: 再生開始後に選択中のフィットモードを確実に適用する
+        //       （再生前に選択した場合、mpv init 後に改めて流す必要がある）
+        applyFitMode();
     });
     connect(mpv_, &player::MpvBackend::endFile, this, [this](int reason) {
         // reason: 0=EOF, 1=stop, 2=quit, 3=error
@@ -70,6 +74,11 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     connect(mpv_, &player::MpvBackend::videoSizeChanged, this, [](int w, int h) {
         qDebug() << "[mpv] videoSizeChanged:" << w << "x" << h;
     });
+
+    // M4.1: フィットモードの初期値を内接（Inscribe）に設定する。
+    //       ここで applyFitMode() を呼んでも mpv が未 init のため no-op。
+    //       実際の適用は fileLoaded シグナル受信後に行う。
+    currentFit_ = FitMode::Inscribe;
 
     // セッションコントローラ
     session_ = new SessionController(mpv_, this);
@@ -187,6 +196,63 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
         menu->addAction(toggleInputDock);
     }
 
+    // M4.1: 「表示」メニュー（フィットモード・アスペクト比）
+    {
+        QMenu* viewMenu = menuBar()->addMenu(tr("表示(&V)"));
+
+        // フィットモードとアスペクト比は同一の排他グループとする。
+        // モード選択は実質一軸なので、1 つの QActionGroup を 2 サブメニューに配置する。
+        displayModeGroup_ = new QActionGroup(this);
+        displayModeGroup_->setExclusive(true);
+
+        // ---- フィットサブメニュー ----
+        QMenu* fitMenu = viewMenu->addMenu(tr("フィット(&F)"));
+
+        auto addFit = [&](const QString& label, FitMode mode, int ax = 0, int ay = 0) {
+            QAction* act = fitMenu->addAction(label);
+            act->setCheckable(true);
+            displayModeGroup_->addAction(act);
+            connect(act, &QAction::triggered, this, [this, mode, ax, ay] {
+                currentFit_     = mode;
+                currentAspectX_ = ax;
+                currentAspectY_ = ay;
+                applyFitMode();
+            });
+            return act;
+        };
+
+        QAction* actInscribe = addFit(tr("内接 (&I)nscribe（既定）"), FitMode::Inscribe);
+        actInscribe->setChecked(true);  // 初期選択
+        addFit(tr("引き伸ばし (&S)tretch"),    FitMode::Stretch);
+        addFit(tr("充填 (&F)ill"),             FitMode::Fill);
+        addFit(tr("等倍 (&U)nscaled"),         FitMode::Unscaled);
+
+        // ---- アスペクト比サブメニュー ----
+        QMenu* aspectMenu = viewMenu->addMenu(tr("アスペクト比(&A)"));
+
+        auto addAspect = [&](const QString& label, FitMode mode, int ax, int ay) {
+            QAction* act = aspectMenu->addAction(label);
+            act->setCheckable(true);
+            displayModeGroup_->addAction(act);
+            connect(act, &QAction::triggered, this, [this, mode, ax, ay] {
+                currentFit_     = mode;
+                currentAspectX_ = ax;
+                currentAspectY_ = ay;
+                applyFitMode();
+            });
+            return act;
+        };
+
+        // 「なし」= 内接相当（フィットサブメニューの内接と同じ効果）
+        addAspect(tr("なし（内接）"), FitMode::Inscribe, 0, 0);
+
+        // プリセット（ハードコード既定。M5: config化）
+        for (const auto& preset : aspectPresets()) {
+            addAspect(QString::fromLatin1(preset.label),
+                      FitMode::AspectOverride, preset.x, preset.y);
+        }
+    }
+
     // ウィンドウタイトルの初期値
     setWindowTitle(QString::fromLatin1(common::appName()));
 }
@@ -249,6 +315,16 @@ void MainWindow::onMpvLogMessage(const QString& prefix,
     if (level == QLatin1String("error") || level == QLatin1String("warn")) {
         qDebug() << "[mpv]" << prefix << level << text;
         statusBar()->showMessage(QStringLiteral("[mpv/%1] %2").arg(prefix, text));
+    }
+}
+
+// M4.1: 現在の currentFit_/currentAspectX_/Y_ を mpv に適用する。
+// mpv 未 init 時（mpv_ ガード）は setProperty が no-op になるため安全。
+void MainWindow::applyFitMode()
+{
+    const auto props = fitModeToMpvProps(currentFit_, currentAspectX_, currentAspectY_);
+    for (const auto& p : props) {
+        mpv_->setProperty(p.name, p.value);
     }
 }
 

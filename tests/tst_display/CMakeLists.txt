@@ -1,6 +1,7 @@
 qt_add_executable(tst_display
     tst_display.cpp
     ${CMAKE_SOURCE_DIR}/src/app/src/window_geometry.cpp
+    ${CMAKE_SOURCE_DIR}/src/app/src/display_modes.cpp    # M4.1: フィット/アスペクト対応表
 )
 
 target_include_directories(tst_display PRIVATE
