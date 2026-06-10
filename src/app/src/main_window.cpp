@@ -121,6 +121,11 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
                     recentPopup_->showRecent(recentRes, globalPos);
                 }
             });
+    // タイトル帯上のホイール → ポップアップの遡行へ転送（カーソルは帯に置いたまま）
+    connect(boardTitleBar_, &BoardTitleBar::scrolled,
+            this, [this](int delta) {
+                recentPopup_->scrollRecent(delta);
+            });
     // タイトル帯からカーソルが外れたとき、ポップアップ自身の上にいる場合は閉じない
     connect(boardTitleBar_, &BoardTitleBar::left,
             this, [this] {

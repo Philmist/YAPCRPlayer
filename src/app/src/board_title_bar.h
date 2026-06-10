@@ -3,6 +3,7 @@
 #include <QWidget>
 
 class QEnterEvent;
+class QWheelEvent;
 
 namespace yapcr::app {
 
@@ -26,11 +27,16 @@ signals:
     void hovered(QPoint globalPos);
     // カーソルが帯から出た
     void left();
+    // 帯の上でホイールが回された（angleDelta().y()）。ポップアップの遡行に転送する。
+    // ポップアップがカーソル追随で動くと帯外への移動が必要になりホイールが実質使えないため、
+    // 帯上でホイールを受けてポップアップへ橋渡しする。
+    void scrolled(int delta);
 
 protected:
     void enterEvent(QEnterEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void leaveEvent(QEvent* event) override;
+    void wheelEvent(QWheelEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
 
 private:

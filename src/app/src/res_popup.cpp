@@ -78,9 +78,19 @@ void ResPopup::showRecent(const QList<yapcr::bbs::ResInfo>& all, QPoint anchorGl
         hide();
         return;
     }
+    // 既に Recent モードで表示中なら、配置と遡行位置は維持する。
+    // （タイトル帯上でのマウス移動ごとに再配置・最新リセットすると、
+    //   ポップアップがカーソルに追随して動き、遡行位置も毎回戻ってしまうため）
+    const bool wasVisible = recentMode_ && isVisible();
+
     recentMode_ = true;
     recentAll_  = all;
-    windowEnd_  = all.size();  // 最初は末尾（最新レス）を基点にする
+    if (!wasVisible) {
+        windowEnd_ = all.size();  // 初回のみ末尾（最新レス）を基点にする
+    } else {
+        // データ更新でサイズが変わっても遡行位置を範囲内に保つ
+        windowEnd_ = qBound(qMin(kWindow, all.size()), windowEnd_, all.size());
+    }
     rebuildText();
 
     // サイズ計算（複数レス分で kMaxHeight を大きめに使う）
@@ -88,22 +98,40 @@ void ResPopup::showRecent(const QList<yapcr::bbs::ResInfo>& all, QPoint anchorGl
     const QSize sz = calcTextSize(fm, displayText_, kMaxWidth, kMaxHeight, kPadding);
     setFixedSize(sz);
 
-    // 配置: タイトル帯（anchorGlobal）の直上に展開する
-    QScreen* scr = QGuiApplication::screenAt(anchorGlobal);
-    if (!scr) { scr = QGuiApplication::primaryScreen(); }
-    const QRect avail = scr->availableGeometry();
+    // 配置は初回表示時のみ確定する（以後はカーソル追随で動かさない）
+    if (!wasVisible) {
+        // 配置: タイトル帯（anchorGlobal）の直上に展開する
+        QScreen* scr = QGuiApplication::screenAt(anchorGlobal);
+        if (!scr) { scr = QGuiApplication::primaryScreen(); }
+        const QRect avail = scr->availableGeometry();
 
-    // 右寄り（カーソル位置基点）で上に展開
-    int x = anchorGlobal.x();
-    int y = anchorGlobal.y() - sz.height() - 4;
+        // 右寄り（カーソル位置基点）で上に展開
+        int x = anchorGlobal.x();
+        int y = anchorGlobal.y() - sz.height() - 4;
 
-    // 画面端クランプ
-    if (x + sz.width() > avail.right())  { x = avail.right()  - sz.width(); }
-    if (y < avail.top())                 { y = anchorGlobal.y() + 4; }  // 上に出せない場合は下
-    x = qMax(x, avail.left());
+        // 画面端クランプ
+        if (x + sz.width() > avail.right())  { x = avail.right()  - sz.width(); }
+        if (y < avail.top())                 { y = anchorGlobal.y() + 4; }  // 上に出せない場合は下
+        x = qMax(x, avail.left());
 
-    move(x, y);
-    show();
+        move(x, y);
+        show();
+    }
+}
+
+void ResPopup::scrollRecent(int delta)
+{
+    if (!recentMode_ || !isVisible() || recentAll_.isEmpty()) { return; }
+
+    // 上回し → 過去レスへ遡る（windowEnd_ を減らす）
+    // 下回し → 最新レスへ戻る（windowEnd_ を増やす）
+    if (delta > 0) {
+        windowEnd_ = qMax(windowEnd_ - 1, qMin(kWindow, recentAll_.size()));
+    } else if (delta < 0) {
+        windowEnd_ = qMin(windowEnd_ + 1, recentAll_.size());
+    }
+    rebuildText();
+    update();
 }
 
 void ResPopup::hidePopup()
@@ -125,13 +153,8 @@ void ResPopup::wheelEvent(QWheelEvent* event)
     const int delta = event->angleDelta().y();
 
     if (recentMode_) {
-        // Recent モード: 上回し → 過去レスへ遡る（windowEnd_ を減らす）
-        //               下回し → 最新レスへ戻る（windowEnd_ を増やす）
-        if (delta > 0) {
-            windowEnd_ = qMax(windowEnd_ - 1, qMin(kWindow, recentAll_.size()));
-        } else if (delta < 0) {
-            windowEnd_ = qMin(windowEnd_ + 1, recentAll_.size());
-        }
+        // Recent モード: ポップアップ自身の上でのホイールも遡行に使う
+        scrollRecent(delta);
     } else {
         // Single モード: 既存の動作を維持
         if (resList_.isEmpty()) { return; }
@@ -140,10 +163,9 @@ void ResPopup::wheelEvent(QWheelEvent* event)
         } else if (delta > 0) {
             wheelIndex_ = qMax(wheelIndex_ - 1, 0);
         }
+        rebuildText();
+        update();
     }
-
-    rebuildText();
-    update();
     event->accept();
 }
 

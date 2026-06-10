@@ -30,6 +30,11 @@ public:
     // all が空なら hide して返す。
     void showRecent(const QList<yapcr::bbs::ResInfo>& all, QPoint anchorGlobal);
 
+    // [Recent モード] 表示中の窓を delta 方向にスライドする（タイトル帯からの転送用）。
+    // delta > 0（上回し）で過去へ、delta < 0（下回し）で最新へ。
+    // Recent モードで表示中でなければ何もしない。
+    void scrollRecent(int delta);
+
     void hidePopup();
 
 protected:
