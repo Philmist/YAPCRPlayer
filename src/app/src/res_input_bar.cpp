@@ -15,6 +15,11 @@ ResInputBar::ResInputBar(QWidget* parent) : QWidget(parent)
     edit_    = new QPlainTextEdit(this);
     sendBtn_ = new QPushButton(tr("送信(&S)"), this);
 
+    // ClickFocus: ユーザーが明示的にクリックしたときだけフォーカスを取る。
+    // StrongFocus（既定）のままだと inputDock_->show() 時に自動フォーカスが移り
+    // MainWindow::keyPressEvent に F/S/Esc が届かなくなる。
+    edit_->setFocusPolicy(Qt::ClickFocus);
+
     // 入力欄は低背（2行）。PCRPlayer 参考: 書き込みバーはスリム。
     edit_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
     const QFontMetrics fm(edit_->font());
