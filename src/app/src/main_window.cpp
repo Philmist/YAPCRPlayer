@@ -28,6 +28,7 @@
 #include <QStatusBar>
 #include <QString>
 #include <QUrl>
+#include <QSplitter>
 #include <QVBoxLayout>
 #include <QtGlobal>
 #ifdef Q_OS_WIN
@@ -37,7 +38,7 @@
 namespace yapcr::app {
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
-    // M3.7: centralWidget を QWidget コンテナ化し、映像ウィジェットと掲示板タイトル帯を縦積みする。
+    // M3.7: centralWidget を QWidget コンテナ化し、各ウィジェットを縦積みする。
     // 注意: videoWidget_->winId() は attachMpv()（showEvent 後）で mpv に渡す。
     //       コンテナ化は attach 前に確定させ、attach 後に reparent しないこと。
     {
@@ -46,33 +47,30 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
         vl->setContentsMargins(0, 0, 0, 0);
         vl->setSpacing(0);
 
-        videoWidget_ = new VideoHostWidget(central);
+        // 映像 / レス一覧 をスプリッターで縦に並べる（ドラッグで高さ調整可能）
+        videoResListSplitter_ = new QSplitter(Qt::Vertical, central);
+        videoResListSplitter_->setChildrenCollapsible(false);
+
+        videoWidget_ = new VideoHostWidget(videoResListSplitter_);
         videoWidget_->setMinimumSize(640, 360);
-        vl->addWidget(videoWidget_, 1);
+        videoResListSplitter_->addWidget(videoWidget_);
+
+        resListPane_ = new ResListPane(videoResListSplitter_);
+        resListPane_->setMinimumHeight(80);
+        resListPane_->hide();  // デフォルト非表示（メニュー「レス一覧 表示切替」で on/off）
+        videoResListSplitter_->addWidget(resListPane_);
+        videoResListSplitter_->setStretchFactor(0, 3);  // 映像:レス一覧 = 3:1（初期比率）
+        videoResListSplitter_->setStretchFactor(1, 1);
+
+        vl->addWidget(videoResListSplitter_, 1);
 
         boardTitleBar_ = new BoardTitleBar(central);
         vl->addWidget(boardTitleBar_, 0);
 
-        // M3.6: BBS パネル（レス一覧 + 書き込み欄、初期は非表示）
-        // QDockWidget を使わず centralWidget 内の固定レイアウトにすることで
-        // フォーカス問題・フルスクリーン不具合・再ドッキング困難を解消する。
-        bbsPanel_ = new QWidget(central);
-        {
-            auto* bbsLayout = new QVBoxLayout(bbsPanel_);
-            bbsLayout->setContentsMargins(0, 0, 0, 0);
-            bbsLayout->setSpacing(0);
-
-            resListPane_ = new ResListPane(bbsPanel_);
-            resListPane_->setMinimumHeight(120);
-            resListPane_->hide();  // デフォルト非表示（ユーザーがメニューで切り替え）
-
-            resInputBar_ = new ResInputBar(bbsPanel_);
-
-            bbsLayout->addWidget(resListPane_, 1);
-            bbsLayout->addWidget(resInputBar_, 0);
-        }
-        bbsPanel_->hide();
-        vl->addWidget(bbsPanel_, 0);
+        // 書き込み欄（BBS パネル表示切替で on/off、初期は非表示）
+        resInputBar_ = new ResInputBar(central);
+        resInputBar_->hide();
+        vl->addWidget(resInputBar_, 0);
 
         setCentralWidget(central);
     }
@@ -128,9 +126,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     connect(session_, &SessionController::bbsResAppended,
             this, [this](const QList<yapcr::bbs::ResInfo>& resList) {
                 resListPane_->appendResList(resList);
-                // 初回受信時のみ自動表示。ユーザーが手動で閉じた後は自動再表示しない。
+                // 初回受信時のみ書き込み欄を自動表示。ユーザーが手動で閉じた後は再表示しない。
                 if (!resList.isEmpty() && !bbsUserClosed_) {
-                    bbsPanel_->show();
+                    resInputBar_->show();
                 }
             });
 
@@ -210,11 +208,12 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
         menu->addSeparator();
         actToggleBbs_ = menu->addAction(tr("BBS パネル (&B) 表示切替"));
         connect(actToggleBbs_, &QAction::triggered, this, [this] {
-            if (bbsPanel_->isVisible()) {
-                bbsPanel_->hide();
+            if (resInputBar_->isVisible()) {
+                resInputBar_->hide();
+                resListPane_->hide();
                 bbsUserClosed_ = true;
             } else {
-                bbsPanel_->show();
+                resInputBar_->show();
                 bbsUserClosed_ = false;
             }
         });
@@ -462,24 +461,11 @@ void MainWindow::toggleFullScreen()
     if (isFullScreen()) { leaveFullScreen(); } else { enterFullScreen(); }
 }
 
-// 全画面入場: バーを退避 → M4.2 サイズ固定を一時解除 → showFullScreen()。
+// 全画面入場: M4.2 サイズ固定を一時解除 → showFullScreen()。
+// PCRPlayer 仕様: UI（ステータスバー・書き込み欄等）はフルスクリーン中も維持する。
 // currentSizeMode_ は変更しない（状態保持）。
 void MainWindow::enterFullScreen()
 {
-    // 入場前のバー表示状態を退避（復帰時に正確に戻すため）
-    savedBars_ = {
-        menuBar()->isVisible(),
-        statusBar()->isVisible(),
-        boardTitleBar_->isVisible(),
-        bbsPanel_->isVisible()
-    };
-
-    // クリーンな映像（Q5=A）: 全バー/パネルを隠す。// M5: config化（全画面時のバー表示有無）
-    menuBar()->hide();
-    statusBar()->hide();
-    boardTitleBar_->hide();
-    bbsPanel_->hide();
-
     // M4.2 のサイズ固定を一時解除（固定箱のまま全画面にすると映像が画面を埋めない）。
     // currentSizeMode_ は保持し、leaveFullScreen() で再適用する。
     videoWidget_->setMinimumSize(640, 360);
@@ -489,18 +475,10 @@ void MainWindow::enterFullScreen()
     if (actFullScreen_) { actFullScreen_->setChecked(true); }
 }
 
-// 全画面復帰: showNormal() → バーを退避状態に戻す → サイズモードを再適用。
+// 全画面復帰: showNormal() → サイズモードを再適用。
 void MainWindow::leaveFullScreen()
 {
     showNormal();
-
-    // バーを入場前の状態に復帰する
-    menuBar()->setVisible(savedBars_.menuBar);
-    statusBar()->setVisible(savedBars_.statusBar);
-    boardTitleBar_->setVisible(savedBars_.titleBar);
-    bbsPanel_->setVisible(savedBars_.bbsPanel);
-
-    // 選択中のサイズモードを再適用（ズーム/絶対サイズの固定を元に戻す）
     reapplySizeMode();
     if (actFullScreen_) { actFullScreen_->setChecked(false); }
 }

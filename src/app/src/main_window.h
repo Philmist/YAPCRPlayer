@@ -8,6 +8,7 @@ class QAction;
 class QActionGroup;
 class QKeyEvent;
 class QMouseEvent;
+class QSplitter;
 class QWidget;
 
 namespace yapcr::player {
@@ -91,10 +92,10 @@ private:
     QAction* actStop_{nullptr};
     QAction* actReload_{nullptr};
 
-    // M3.6: BBS パネル（レス一覧 + 書き込み欄、centralWidget 内固定）
+    // M3.6: BBS（レス一覧 + 書き込み欄）
     ResListPane*  resListPane_{nullptr};
     ResInputBar*  resInputBar_{nullptr};
-    QWidget*      bbsPanel_{nullptr};       // レス一覧 + 書き込み欄をまとめた固定パネル
+    QSplitter*    videoResListSplitter_{nullptr};  // 映像 / レス一覧 分割バー
     bool          bbsUserClosed_{false};    // ユーザーが手動で閉じたら true（自動再表示を抑制）
     QAction*      actBbsRefresh_{nullptr};
     QAction*      actToggleBbs_{nullptr};
@@ -122,12 +123,6 @@ private:
     QAction* actFullScreen_{nullptr};    // チェック可能・全画面状態に同期
     int      lastAbsW_{0};             // 絶対サイズ再適用用（applyAbsoluteSize で記録）
     int      lastAbsH_{0};
-    struct FullScreenState {           // 全画面入場前のバー表示状態を退避
-        bool menuBar{true};
-        bool statusBar{true};
-        bool titleBar{true};    // boardTitleBar_
-        bool bbsPanel{false};   // bbsPanel_
-    } savedBars_;                // M5: config化（全画面時のバー表示有無）
 
     // M4.4: スナップショット
     QAction* actSnapshot_{nullptr};        // 「スナップショット保存」アクション
