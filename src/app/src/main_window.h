@@ -49,8 +49,9 @@ public:
 
 protected:
     void showEvent(QShowEvent* event) override;
-    void keyPressEvent(QKeyEvent* event) override;           // M4.3: F=全画面トグル, Esc=全画面解除
-    void mouseDoubleClickEvent(QMouseEvent* event) override; // M4.3: ダブルクリックで全画面トグル
+    void keyPressEvent(QKeyEvent* event) override;                               // M4.3: F=全画面トグル, Esc=全画面解除
+    void mouseDoubleClickEvent(QMouseEvent* event) override;                     // M4.3: ダブルクリックで全画面トグル
+    bool nativeEvent(const QByteArray& eventType, void* message, qintptr* result) override; // 映像子 HWND クリック検出
 
 private slots:
     void onTitleChanged(const QString& title);
@@ -97,6 +98,7 @@ private:
     bool          bbsUserClosed_{false};    // ユーザーが手動で閉じたら true（自動再表示を抑制）
     QAction*      actBbsRefresh_{nullptr};
     QAction*      actToggleBbs_{nullptr};
+    QAction*      actToggleResList_{nullptr};
 
     // M3.7: 掲示板タイトル帯 + 直近レスポップアップ（映像上オーバーレイ）
     BoardTitleBar* boardTitleBar_{nullptr};

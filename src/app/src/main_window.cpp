@@ -30,6 +30,9 @@
 #include <QUrl>
 #include <QVBoxLayout>
 #include <QtGlobal>
+#ifdef Q_OS_WIN
+#include <windows.h>
+#endif
 
 namespace yapcr::app {
 
@@ -61,6 +64,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
 
             resListPane_ = new ResListPane(bbsPanel_);
             resListPane_->setMinimumHeight(120);
+            resListPane_->hide();  // デフォルト非表示（ユーザーがメニューで切り替え）
 
             resInputBar_ = new ResInputBar(bbsPanel_);
 
@@ -213,6 +217,10 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
                 bbsPanel_->show();
                 bbsUserClosed_ = false;
             }
+        });
+        actToggleResList_ = menu->addAction(tr("レス一覧 (&L) 表示切替"));
+        connect(actToggleResList_, &QAction::triggered, this, [this] {
+            resListPane_->setVisible(!resListPane_->isVisible());
         });
     }
 
@@ -572,6 +580,25 @@ void MainWindow::openSnapshotFolder()
     const QString dir = snapshotDirectory();
     QDir().mkpath(dir);
     QDesktopServices::openUrl(QUrl::fromLocalFile(dir));
+}
+
+// 映像子ウィンドウ（mpv --wid）のクリックを検出して MainWindow にフォーカスを戻す。
+// mpv は VideoHostWidget 内に子 HWND を置くため Qt のマウスイベントが届かない。
+// WM_PARENTNOTIFY は子 HWND でのマウスボタン押下を祖先ウィンドウに伝播させる。
+bool MainWindow::nativeEvent(const QByteArray& eventType, void* message, qintptr* result)
+{
+#ifdef Q_OS_WIN
+    if (eventType == "windows_generic_MSG") {
+        const MSG* msg = static_cast<const MSG*>(message);
+        if (msg->message == WM_PARENTNOTIFY) {
+            const UINT childMsg = LOWORD(msg->wParam);
+            if (childMsg == WM_LBUTTONDOWN || childMsg == WM_RBUTTONDOWN) {
+                setFocus(Qt::MouseFocusReason);
+            }
+        }
+    }
+#endif
+    return QMainWindow::nativeEvent(eventType, message, result);
 }
 
 }  // namespace yapcr::app
