@@ -35,6 +35,9 @@ void SessionController::start(const QString& path,
                                const QString& contact,
                                bool           commandline)
 {
+    // M3.8: 再 start() 時に前回の BBS ポーリングを止める（二重起動防止）
+    stopBbsPolling();
+
     path_        = path;
     name_        = name;
     contact_     = contact;
@@ -66,6 +69,12 @@ void SessionController::start(const QString& path,
         streamUrl_.clear();
         backend_->load(path);
         emit statusMessage(tr("再生中: %1").arg(path));
+    }
+
+    // M3.8: 3引数起動（commandline）かつ contact があれば BBS を自動接続する。
+    // peercast / ローカル再生のいずれでも contact があれば実況ポーリングを開始する。
+    if (commandline_ && !contact_.isEmpty()) {
+        bbsRefresh();
     }
 }
 
@@ -255,6 +264,16 @@ void SessionController::onSupplyLost() {
     emit statusMessage(tr("供給が回復しません。手動で操作してください。"));
 }
 
+// ---- BBS ポーリング停止ヘルパ（M3.8）----------------------------------------
+
+void SessionController::stopBbsPolling()
+{
+    if (bbsPollTimer_) {
+        bbsPollTimer_->stop();
+        // タイマは this 所有のまま（次の bbsRefresh で再利用）
+    }
+}
+
 // ---- BBS 操作スロット（M3.6）-----------------------------------------------
 
 void SessionController::bbsRefresh()
@@ -272,6 +291,17 @@ void SessionController::bbsRefresh()
     // dat 取得・表示を止めないよう分離する。
     bbs_->loadSetting();
     bbs_->loadDat();
+
+    // M3.8: dat ポーリングタイマを（再）起動する。
+    // init() のたびにタイマをリセットして間隔ズレを防ぐ。
+    if (!bbsPollTimer_) {
+        bbsPollTimer_ = new QTimer(this);
+        bbsPollTimer_->setInterval(kBbsPollIntervalMs);
+        connect(bbsPollTimer_, &QTimer::timeout, this, [this] {
+            bbs_->loadDat();  // 条件付き GET — 304 なら merge スキップ
+        });
+    }
+    bbsPollTimer_->start();  // 既に動いていても start() でタイマをリセット
 }
 
 void SessionController::bbsPost(const QString& message)
@@ -281,8 +311,9 @@ void SessionController::bbsPost(const QString& message)
         emit bbsPostFinished(false);
         return;
     }
-    // 名前/メールは空（最小構成）。M3.8 で名前/メール入力欄を追加予定。
-    bbs_->post(QString{}, QString{}, message);
+    // 名前=空、メール=sage（M3.8 既定）。
+    // M5: メニューから sage on/off 切替、名前入力を config 化する。
+    bbs_->post(QString{}, QStringLiteral("sage"), message);
 }
 
 // ---- BBS シグナル受信スロット（M3.6）----------------------------------------

@@ -126,6 +126,11 @@ private:
     static constexpr int kInfoPollIntervalMs  = 30'000;  // 30 秒
     // Watchdog 評価間隔（ms）
     static constexpr int kWatchdogTickMs      = 3'000;   // 3 秒
+    // BBS dat ポーリング間隔（ms）— M3.8。M5 で config 化予定
+    static constexpr int kBbsPollIntervalMs   = 15'000;  // 15 秒
+
+    // PeerCast セッション停止（teardownPeerCast からも呼ぶ。BBS は独立管理）
+    void stopBbsPolling();
 
     player::MpvBackend*            backend_;
     peercast::StreamResolver*      resolver_{nullptr};
@@ -133,6 +138,7 @@ private:
     player::Watchdog*              watchdog_{nullptr};
     QTimer*                        infoTimer_{nullptr};
     QTimer*                        watchdogTimer_{nullptr};
+    QTimer*                        bbsPollTimer_{nullptr};  // M3.8: dat 定期ポーリング
 
     QString path_;
     QString name_;
