@@ -25,6 +25,17 @@ QList<QString> extractUrls(const QString& message);
 // 移植元: BBSReplace::anchor / BBSRegex::convert(text, Range&) / BBSRegex::convert(wchar_t)
 QList<Range> extractAnchors(const QString& message);
 
+// アンカーを「マッチ位置付き」で抽出する。着色用に message 内の区間を直接包むために使う。
+//   start/length は message 内の文字位置（QString インデックス）。
+//   range はそのアンカー1個分の包含範囲（複数 pair の場合は min(first)..max(last)）。
+// extractAnchors と同一の正規表現を共用する。
+struct AnchorSpan {
+    int   start{0};
+    int   length{0};
+    Range range;
+};
+QList<AnchorSpan> extractAnchorSpans(const QString& message);
+
 // ID を抽出する。"ID:XXXXXXXX" 形式。見つからない場合は空文字列を返す。
 // 移植元: BBSReplace::id / BBSRegex::head / BBSRegex::serial
 QString extractId(const QString& text);

@@ -6,17 +6,19 @@
 #include <functional>
 #include <QList>
 #include <QMouseEvent>
-#include <QPlainTextEdit>
+#include <QTextBrowser>
 
 namespace yapcr::app {
 
-// 簡易レス一覧ペイン（M3.6/M3.7）
+// 簡易レス一覧ペイン（M3.6/M3.7 → M6.1 リッチテキスト化）
 //
-// QPlainTextEdit ベースの読み取り専用スクロール可能テキスト一覧。
-// 整形: 1レス = "番号 名前 [ID] 日時\n本文" のプレーンテキスト行。
-// 差分追記: 既出件数を保持し新規分のみ appendPlainText で追記する。
-// M3.7: ヘッダ行ホバーで byRef ポップアップ、本文 >>N ホバーで byRange ポップアップを表示。
-class ResListPane : public QPlainTextEdit {
+// QTextBrowser ベースの読み取り専用スクロール可能リッチテキスト一覧。
+// 整形: 1レス = reshtml::resToHtml() の HTML 断片（番号/名前/メール/日時を色分け、
+//        本文アンカーを着色）。レス間は <hr> で区切る。
+// 差分追記: 既出件数を保持し新規分のみ insertHtml で追記する。
+// ホバー: anchorAt() で href を判定し、"ref:N" で byRef ポップアップ、
+//         "range:a-b" で byRange ポップアップを表示する。
+class ResListPane : public QTextBrowser {
     Q_OBJECT
 
 public:
@@ -47,17 +49,11 @@ protected:
     void leaveEvent(QEvent* event) override;
 
 private:
-    // カーソル位置がレスのヘッダ行（先頭ブロック）にあれば正のレス番号を返す。
-    int resNumberAt(QPoint vpos) const;
-
-    // カーソル位置が本文行内のアンカー >>N にあればその N を返す。なければ -1。
-    int anchorTargetAt(QPoint vpos) const;
-
     int     displayedCount_{0};
     QString threadTitle_;
 
     ResPopup*    popup_{nullptr};
-    int          lastHoveredRes_{-1};
+    QString      lastHoveredHref_;  // 直近にホバー中の href（同一連打の再表示抑止）
     ResQueryFn   byRefProvider_;
     RangeQueryFn byRangeProvider_;
 };

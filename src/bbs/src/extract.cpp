@@ -102,6 +102,37 @@ static QList<Range> parseAnchorStr(const QString& anchorMatch)
     return result;
 }
 
+// アンカーパターン（gt2 groupe）。extractAnchors / extractAnchorSpans で共用する。
+//   gt2    = (?:&gt;|＞){1,2}
+//   number = [0-9０-９]+
+//   hyphen = (?:-|－)  comma = (?:,|，)
+//   pair   = number(hyphen number)*   groupe = pair(comma pair)*
+// NOTE: dat 内は HTML エスケープ済みのため &gt; に当てる。ASCII > には当てない。
+static const QRegularExpression& anchorRegex()
+{
+    static const QRegularExpression rx(
+        QStringLiteral(
+            R"((?:&gt;|＞){1,2})"          // gt2
+            R"([0-9０-９]+)"                // number (pair 先頭)
+            R"((?:(?:-|－)[0-9０-９]+)*)"   // (hyphen number)*
+            R"((?:(?:,|，)[0-9０-９]+(?:(?:-|－)[0-9０-９]+)*)*)" // (comma pair)*
+        ));
+    return rx;
+}
+
+// parseAnchorStr の複数 Range を min(first)..max(last) の包含 Range に畳む。
+static Range boundingRange(const QList<Range>& ranges)
+{
+    if (ranges.isEmpty()) { return Range{}; }
+    int mn = ranges.first().first;
+    int mx = ranges.first().last;
+    for (const Range& r : ranges) {
+        mn = qMin(mn, qMin(r.first, r.last));
+        mx = qMax(mx, qMax(r.first, r.last));
+    }
+    return Range{mn, mx};
+}
+
 }  // namespace
 
 // ── extractUrls ──────────────────────────────────────────────────────────────
@@ -145,20 +176,31 @@ QList<QString> extractUrls(const QString& message)
 // NOTE: dat 内は HTML エスケープ済みのため &gt; に当てる。ASCII > には当てない。
 QList<Range> extractAnchors(const QString& message)
 {
-    static const QRegularExpression rx(
-        QStringLiteral(
-            R"((?:&gt;|＞){1,2})"          // gt2
-            R"([0-9０-９]+)"                // number (pair 先頭)
-            R"((?:(?:-|－)[0-9０-９]+)*)"   // (hyphen number)*
-            R"((?:(?:,|，)[0-9０-９]+(?:(?:-|－)[0-9０-９]+)*)*)" // (comma pair)*
-        ));
-
     QList<Range> result;
-    QRegularExpressionMatchIterator it = rx.globalMatch(message);
+    QRegularExpressionMatchIterator it = anchorRegex().globalMatch(message);
     while (it.hasNext()) {
         const QRegularExpressionMatch m = it.next();
         const QList<Range> ranges = parseAnchorStr(m.captured(0));
         result.append(ranges);
+    }
+    return result;
+}
+
+// ── extractAnchorSpans ─────────────────────────────────────────────────────────
+// extractAnchors と同一の正規表現でマッチし、位置（start/length）と
+// 包含 Range を返す。着色用に message 内のアンカー区間を直接包むために使う。
+QList<AnchorSpan> extractAnchorSpans(const QString& message)
+{
+    QList<AnchorSpan> result;
+    QRegularExpressionMatchIterator it = anchorRegex().globalMatch(message);
+    while (it.hasNext()) {
+        const QRegularExpressionMatch m = it.next();
+        const Range r = boundingRange(parseAnchorStr(m.captured(0)));
+        if (r.first == 0 && r.last == 0) { continue; }  // 数値化できないものは除外
+        result.append(AnchorSpan{
+            static_cast<int>(m.capturedStart(0)),
+            static_cast<int>(m.capturedLength(0)),
+            r});
     }
     return result;
 }

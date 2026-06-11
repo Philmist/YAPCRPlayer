@@ -827,6 +827,72 @@ private slots:
         QCOMPARE(ranges.size(), 0);
     }
 
+    // ======== extractAnchorSpans ========
+
+    void extractAnchorSpans_single()
+    {
+        using namespace yapcr::bbs;
+        const QString msg = QStringLiteral("foo &gt;&gt;99 bar");
+        const QList<AnchorSpan> spans = extractAnchorSpans(msg);
+        QCOMPARE(spans.size(), 1);
+        // start/length が message 内のマッチ区間を正しく指す
+        QCOMPARE(msg.mid(spans[0].start, spans[0].length), QStringLiteral("&gt;&gt;99"));
+        QCOMPARE(spans[0].range.first, 99);
+        QCOMPARE(spans[0].range.last,  99);
+    }
+
+    void extractAnchorSpans_range()
+    {
+        using namespace yapcr::bbs;
+        const QString msg = QStringLiteral("&gt;&gt;1-30");
+        const QList<AnchorSpan> spans = extractAnchorSpans(msg);
+        QCOMPARE(spans.size(), 1);
+        QCOMPARE(spans[0].start,  0);
+        QCOMPARE(spans[0].length, msg.size());
+        QCOMPARE(spans[0].range.first, 1);
+        QCOMPARE(spans[0].range.last,  30);
+    }
+
+    void extractAnchorSpans_group_bounding()
+    {
+        using namespace yapcr::bbs;
+        // 群アンカーは包含 Range（min..max）に畳まれ、1 span として返る
+        const QList<AnchorSpan> spans = extractAnchorSpans(QStringLiteral("&gt;&gt;1,3,5"));
+        QCOMPARE(spans.size(), 1);
+        QCOMPARE(spans[0].range.first, 1);
+        QCOMPARE(spans[0].range.last,  5);
+    }
+
+    void extractAnchorSpans_fullwidth()
+    {
+        using namespace yapcr::bbs;
+        const QString msg = QStringLiteral("＞＞１２３");
+        const QList<AnchorSpan> spans = extractAnchorSpans(msg);
+        QCOMPARE(spans.size(), 1);
+        QCOMPARE(msg.mid(spans[0].start, spans[0].length), msg);
+        QCOMPARE(spans[0].range.first, 123);
+        QCOMPARE(spans[0].range.last,  123);
+    }
+
+    void extractAnchorSpans_multiple()
+    {
+        using namespace yapcr::bbs;
+        const QString msg = QStringLiteral("&gt;&gt;1 と &gt;&gt;10-12 を参照");
+        const QList<AnchorSpan> spans = extractAnchorSpans(msg);
+        QCOMPARE(spans.size(), 2);
+        QCOMPARE(msg.mid(spans[0].start, spans[0].length), QStringLiteral("&gt;&gt;1"));
+        QCOMPARE(spans[0].range.first, 1);
+        QCOMPARE(msg.mid(spans[1].start, spans[1].length), QStringLiteral("&gt;&gt;10-12"));
+        QCOMPARE(spans[1].range.first, 10);
+        QCOMPARE(spans[1].range.last,  12);
+    }
+
+    void extractAnchorSpans_none()
+    {
+        using namespace yapcr::bbs;
+        QCOMPARE(extractAnchorSpans(QStringLiteral("アンカーなし >>123")).size(), 0);
+    }
+
     // ======== extractId ========
 
     void extractId_match()

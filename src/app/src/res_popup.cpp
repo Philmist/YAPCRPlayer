@@ -1,42 +1,21 @@
 #include "res_popup.h"
 
+#include "res_html.h"
+
 #include <QGuiApplication>
 #include <QPainter>
 #include <QScreen>
 #include <QWheelEvent>
+#include <QtMath>
 
 namespace yapcr::app {
-
-namespace {
-
-QString formatResShort(const yapcr::bbs::ResInfo& r)
-{
-    QString header = r.number;
-    if (!r.name.isEmpty())     { header += QLatin1Char(' ') + r.name; }
-    if (!r.id.isEmpty())       { header += QStringLiteral(" [") + r.id + QLatin1Char(']'); }
-    if (!r.datetime.isEmpty()) { header += QLatin1Char(' ') + r.datetime; }
-    return header + QLatin1Char('\n') + r.message;
-}
-
-// フォントメトリクスを使いテキストの表示サイズを概算する
-QSize calcTextSize(const QFontMetrics& fm, const QString& text,
-                   int maxWidth, int maxHeight, int padding)
-{
-    const int textW = maxWidth - padding * 2;
-    const QRect br  = fm.boundingRect(QRect(0, 0, textW, 0),
-                                      Qt::TextWordWrap, text);
-    const int w = qMin(br.width()  + padding * 2 + 4, maxWidth);
-    const int h = qMin(br.height() + padding * 2 + 4, maxHeight);
-    return {w, h};
-}
-
-}  // namespace
 
 ResPopup::ResPopup(QWidget* parent) : QWidget(parent)
 {
     setWindowFlags(Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
     setAttribute(Qt::WA_TranslucentBackground);
     setAttribute(Qt::WA_ShowWithoutActivating);
+    doc_.setDefaultStyleSheet(QStringLiteral("a { text-decoration: none; }"));
     hide();
 }
 
@@ -50,11 +29,7 @@ void ResPopup::showAt(const QList<yapcr::bbs::ResInfo>& resList, QPoint globalPo
     resList_    = resList;
     wheelIndex_ = 0;
     rebuildText();
-
-    // サイズを fontMetrics で概算して確定する
-    const QFontMetrics fm(font());
-    const QSize sz = calcTextSize(fm, displayText_, kMaxWidth, kMaxHeight, kPadding);
-    setFixedSize(sz);
+    setFixedSize(computeSize());
 
     // 配置: globalPos の右下を基点に、画面外ならクランプ
     QScreen* scr = QGuiApplication::screenAt(globalPos);
@@ -63,8 +38,8 @@ void ResPopup::showAt(const QList<yapcr::bbs::ResInfo>& resList, QPoint globalPo
 
     int x = globalPos.x() + 12;
     int y = globalPos.y() + 12;
-    if (x + sz.width()  > avail.right())  { x = globalPos.x() - sz.width()  - 4; }
-    if (y + sz.height() > avail.bottom()) { y = globalPos.y() - sz.height() - 4; }
+    if (x + width()  > avail.right())  { x = globalPos.x() - width()  - 4; }
+    if (y + height() > avail.bottom()) { y = globalPos.y() - height() - 4; }
     x = qMax(x, avail.left());
     y = qMax(y, avail.top());
 
@@ -92,11 +67,7 @@ void ResPopup::showRecent(const QList<yapcr::bbs::ResInfo>& all, QPoint anchorGl
         windowEnd_ = qBound(qMin(kWindow, all.size()), windowEnd_, all.size());
     }
     rebuildText();
-
-    // サイズ計算（複数レス分で kMaxHeight を大きめに使う）
-    const QFontMetrics fm(font());
-    const QSize sz = calcTextSize(fm, displayText_, kMaxWidth, kMaxHeight, kPadding);
-    setFixedSize(sz);
+    setFixedSize(computeSize());
 
     // 配置は初回表示時のみ確定する（以後はカーソル追随で動かさない）
     if (!wasVisible) {
@@ -107,11 +78,11 @@ void ResPopup::showRecent(const QList<yapcr::bbs::ResInfo>& all, QPoint anchorGl
 
         // 右寄り（カーソル位置基点）で上に展開
         int x = anchorGlobal.x();
-        int y = anchorGlobal.y() - sz.height() - 4;
+        int y = anchorGlobal.y() - height() - 4;
 
         // 画面端クランプ
-        if (x + sz.width() > avail.right())  { x = avail.right()  - sz.width(); }
-        if (y < avail.top())                 { y = anchorGlobal.y() + 4; }  // 上に出せない場合は下
+        if (x + width() > avail.right())  { x = avail.right() - width(); }
+        if (y < avail.top())              { y = anchorGlobal.y() + 4; }  // 上に出せない場合は下
         x = qMax(x, avail.left());
 
         move(x, y);
@@ -139,13 +110,32 @@ void ResPopup::hidePopup()
     hide();
 }
 
+QSize ResPopup::computeSize()
+{
+    doc_.setDefaultFont(font());
+    // まず最大幅で割り付け、必要十分な幅(idealWidth)を求めてから再割り付けして高さを確定する
+    const qreal maxContentW = kMaxWidth - kPadding * 2;
+    doc_.setTextWidth(maxContentW);
+    const qreal contentW = qMin(doc_.idealWidth(), maxContentW);
+    doc_.setTextWidth(contentW);
+    const QSizeF s = doc_.size();
+
+    const int w = qMin(qCeil(s.width())  + kPadding * 2, kMaxWidth);
+    const int h = qMin(qCeil(s.height()) + kPadding * 2, kMaxHeight);
+    return {w, h};
+}
+
 void ResPopup::paintEvent(QPaintEvent*)
 {
     QPainter p(this);
-    p.fillRect(rect(), QColor(0, 0, 0, static_cast<int>(255 * kAlpha)));
-    p.setPen(Qt::white);
-    p.drawText(rect().adjusted(kPadding, kPadding, -kPadding, -kPadding),
-               Qt::TextWordWrap, displayText_);
+    // ライト半透明背景（一覧ペインと同パレットの色が読めるように）
+    p.fillRect(rect(), QColor(250, 250, 250, static_cast<int>(255 * kAlpha)));
+    p.setPen(QColor(170, 170, 170));
+    p.drawRect(rect().adjusted(0, 0, -1, -1));
+
+    p.translate(kPadding, kPadding);
+    const QRectF clip(0, 0, width() - kPadding * 2, height() - kPadding * 2);
+    doc_.drawContents(&p, clip);
 }
 
 void ResPopup::wheelEvent(QWheelEvent* event)
@@ -180,37 +170,44 @@ void ResPopup::leaveEvent(QEvent* event)
 
 void ResPopup::rebuildText()
 {
+    QString html;
+
     if (recentMode_) {
         // Recent モード: windowEnd_ を末尾として kWindow 件をスタック表示
         if (recentAll_.isEmpty()) {
-            displayText_.clear();
+            doc_.clear();
             return;
         }
         const int end   = qBound(0, windowEnd_, recentAll_.size());
         const int begin = qMax(0, end - kWindow);
-        QStringList lines;
+        QStringList frags;
         for (int i = begin; i < end; ++i) {
-            lines.append(formatResShort(recentAll_.at(i)));
+            frags.append(reshtml::resToHtml(recentAll_.at(i), /*withAnchorLinks=*/false));
         }
-        // フッター: 表示範囲 / 全体
-        const int dispFirst = begin + 1;
-        const int dispLast  = end;
-        lines.append(QStringLiteral("[%1-%2 / %3]")
-                         .arg(dispFirst).arg(dispLast).arg(recentAll_.size()));
-        displayText_ = lines.join(QLatin1Char('\n'));
+        html = frags.join(QStringLiteral("<hr>"));
+        // フッタ: 表示範囲 / 全体
+        html += QStringLiteral("<hr><div style=\"color:%1;\">[%2-%3 / %4]</div>")
+                    .arg(reshtml::kTimeColor,
+                         QString::number(begin + 1),
+                         QString::number(end),
+                         QString::number(recentAll_.size()));
     } else {
         // Single モード: 既存の動作
         if (resList_.isEmpty()) {
-            displayText_.clear();
+            doc_.clear();
             return;
         }
         const int idx = qBound(0, wheelIndex_, resList_.size() - 1);
-        const auto& r = resList_.at(idx);
-        displayText_  = formatResShort(r);
+        html = reshtml::resToHtml(resList_.at(idx), /*withAnchorLinks=*/false);
         if (resList_.size() > 1) {
-            displayText_ += QStringLiteral("\n[%1/%2]").arg(idx + 1).arg(resList_.size());
+            html += QStringLiteral("<hr><div style=\"color:%1;\">[%2/%3]</div>")
+                        .arg(reshtml::kTimeColor,
+                             QString::number(idx + 1),
+                             QString::number(resList_.size()));
         }
     }
+
+    doc_.setHtml(html);
 }
 
 }  // namespace yapcr::app

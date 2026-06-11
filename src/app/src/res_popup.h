@@ -3,6 +3,7 @@
 #include "bbs/models.h"
 
 #include <QList>
+#include <QTextDocument>
 #include <QWidget>
 
 namespace yapcr::app {
@@ -43,7 +44,9 @@ protected:
     void leaveEvent(QEvent* event) override;
 
 private:
-    void rebuildText();
+    void  rebuildText();
+    // doc_ の内容から表示サイズを算出する（kMaxWidth/kMaxHeight でクランプ）。
+    QSize computeSize();
 
     // ---- Single モード ----
     QList<yapcr::bbs::ResInfo> resList_;
@@ -54,13 +57,13 @@ private:
     int     windowEnd_{0};  // 現在表示する末尾レスのインデックス（1始まり → サイズ基準）
 
     // ---- 共通 ----
-    bool    recentMode_{false};
-    QString displayText_;
+    bool          recentMode_{false};
+    QTextDocument doc_;  // 表示用リッチテキスト（一覧ペインと同配色）
 
     static constexpr int   kPadding   = 8;
     static constexpr int   kMaxWidth  = 600;
     static constexpr int   kMaxHeight = 400;
-    static constexpr qreal kAlpha     = 0.88;
+    static constexpr qreal kAlpha     = 0.92;  // ライト半透明背景の不透明度
     static constexpr int   kWindow    = 10;  // Recent モードで一度に表示するレス数
 };
 

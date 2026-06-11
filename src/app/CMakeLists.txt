@@ -8,6 +8,8 @@ qt_add_executable(YAPCRPlayer WIN32
     src/session_controller.h
     src/res_list_pane.cpp      # M3.6: 簡易レス一覧ペイン
     src/res_list_pane.h
+    src/res_html.cpp           # M6.1: レス→リッチテキスト HTML 共有フォーマッタ
+    src/res_html.h
     src/res_input_bar.cpp      # M3.6: 下部レス入力バー
     src/res_input_bar.h
     src/res_popup.cpp          # M3.7: hover レス・ポップアップ
