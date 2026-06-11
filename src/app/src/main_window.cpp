@@ -14,6 +14,7 @@
 #include "action_id.h"         // M5.1: ActionId / defaultKeyMap
 #include "shortcut_keys.h"     // M5.1: keyChordFromEvent
 #include "media_source.h"      // M5.4: クリップボード/パスの再生ソース種別判定
+#include "restore_state.h"    // M5.5: [restore] × [state] 復元値選択（純ロジック）
 
 #include <QAction>
 #include <QActionGroup>
@@ -31,6 +32,8 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QMouseEvent>
+#include <QCloseEvent>
+#include <QScreen>
 #include <QShowEvent>
 #include <QStandardPaths>
 #include <QStatusBar>
@@ -200,12 +203,10 @@ MainWindow::MainWindow(const config::Config& cfg,
                 session_->bbsPost(msg);
             });
 
-    // M5.3: 音量 / ミュート の起動時復元 ——————————————————————————————————————————
-    // [restore] トグルが true のものだけ [state] 値を適用。false ならアプリ既定（100/false）。
-    currentVolume_ = config_.restore.volume
-                         ? clampVolume(config_.state.volume)
-                         : 100;
-    muteState_.setUser(config_.restore.mute ? config_.state.mute : false);
+    // M5.5: 音量 / ミュート / ウィンドウジオメトリ の起動時復元 ————————————————————
+    // [restore] トグルが true のものだけ [state] 値を適用（純ロジックは restore_state.h）。
+    currentVolume_ = restoredVolume(config_.restore, config_.state);
+    muteState_.setUser(restoredMute(config_.restore, config_.state));
 
     // M5.1/M5.2: アクションレジストリ設定 ——————————————————————————————————————————
     // TOML [shortcuts] の差分をデフォルト表に上書きしてキーマップを構築する。
@@ -327,6 +328,12 @@ MainWindow::MainWindow(const config::Config& cfg,
         QDesktopServices::openUrl(QUrl(c));
     });
 
+    // M5.5: 終了 / 切断して終了 —————————————————————————————————————————————————
+    // Quit: 単純終了（closeEvent で [state] 保存）
+    // QuitStop: quitStopRequested_ フラグを立ててから close → closeEvent でチャンネル切断
+    registry_.on(ActionId::Quit,     [this]{ close(); });
+    registry_.on(ActionId::QuitStop, [this]{ quitStopRequested_ = true; close(); });
+
     // アスペクトプリセットハンドラ（メニュー構築前に登録。ポインタは [this] 経由で実行時参照）
     registry_.on(ActionId::AspectDefault, [this]{
         currentFit_ = FitMode::Inscribe; currentAspectX_ = 0; currentAspectY_ = 0;
@@ -380,6 +387,15 @@ MainWindow::MainWindow(const config::Config& cfg,
         QAction* actOpenBrowser = fileMenu->addAction(tr("掲示板をブラウザで開く(&B)"));
         connect(actOpenBrowser, &QAction::triggered, this,
                 [this]{ registry_.trigger(ActionId::OpenContactInBrowser); });
+
+        // M5.5: 終了導線
+        fileMenu->addSeparator();
+        QAction* actQuit = fileMenu->addAction(tr("終了(&X)"));
+        connect(actQuit, &QAction::triggered, this,
+                [this]{ registry_.trigger(ActionId::Quit); });
+        QAction* actQuitStop = fileMenu->addAction(tr("切断して終了\tAlt+X"));
+        connect(actQuitStop, &QAction::triggered, this,
+                [this]{ registry_.trigger(ActionId::QuitStop); });
     }
 
     // M2: 最小メニューバー（再接続/切断/再読込） ——————————————————————————————————
@@ -579,6 +595,20 @@ MainWindow::MainWindow(const config::Config& cfg,
         QAction* actReloadConfig = viewMenu->addAction(tr("設定を再読み込み"));
         connect(actReloadConfig, &QAction::triggered, this,
                 [this]{ registry_.trigger(ActionId::ReloadConfig); });
+    }
+
+    // M5.5: ウィンドウジオメトリの起動時復元 ————————————————————————————————————
+    // resize は show() 前でも有効（Qt はウィンドウ非表示時に仮想ジオメトリを保持）。
+    // move はオフスクリーン復元を防ぐため、復元座標が可視スクリーン上にある場合のみ適用する。
+    {
+        const auto geo = restoredGeometry(config_.restore, config_.state);
+        resize(geo.w, geo.h);
+        if (geo.applyPosition) {
+            const QPoint pos(geo.x, geo.y);
+            if (QGuiApplication::screenAt(pos) != nullptr) {
+                move(pos);
+            }
+        }
     }
 
     // ウィンドウタイトルの初期値
@@ -862,6 +892,31 @@ void MainWindow::changeEvent(QEvent* event)
         }
     }
     QMainWindow::changeEvent(event);
+}
+
+// M5.5: 終了時に [state] を現在値に更新して config.toml を書き出す。
+// QuitStop アクション起動（quitStopRequested_=true）または [general].quit_stop=true のとき
+// 終了前にチャンネル切断（PCRPlayer MainDlg.cpp:711 の network.stop 分岐に相当）。
+void MainWindow::closeEvent(QCloseEvent* event)
+{
+    // チャンネル切断
+    if (quitStopRequested_ || config_.general.quit_stop) {
+        session_->manualStop();
+    }
+
+    // [state] を現在値に更新する。
+    // normalGeometry() は最小化・最大化・全画面時でも通常ウィンドウの位置/サイズを返す。
+    const QRect g = normalGeometry();
+    config_.state.window_x = g.x();
+    config_.state.window_y = g.y();
+    config_.state.window_w = g.width();
+    config_.state.window_h = g.height();
+    config_.state.volume   = currentVolume_;
+    config_.state.mute     = muteState_.userMute();
+    // sage はロード値をそのまま保持（live トグル未実装）。データ欠落させずに書き戻す。
+
+    config::save(config_, configPath_);
+    QMainWindow::closeEvent(event);
 }
 
 // 映像子ウィンドウ（mpv --wid）のクリックを検出して MainWindow にフォーカスを戻す。

@@ -60,6 +60,7 @@ protected:
     void keyPressEvent(QKeyEvent* event) override;                               // M4.3: F=全画面トグル, Esc=全画面解除
     void mouseDoubleClickEvent(QMouseEvent* event) override;                     // M4.3: ダブルクリックで全画面トグル
     void changeEvent(QEvent* event) override;                                    // M5.3: 最小化/復帰検出（連動ミュート）
+    void closeEvent(QCloseEvent* event) override;                               // M5.5: 終了時一括保存
     bool nativeEvent(const QByteArray& eventType, void* message, qintptr* result) override; // 映像子 HWND クリック検出
 
 private slots:
@@ -96,6 +97,7 @@ private:
 
     config::Config           config_;      // M5.0: 起動時ロード済み設定
     QString                  configPath_;  // M5.2: ReloadConfig/OpenConfigFolder 用パス
+    bool                     quitStopRequested_{false};  // M5.5: QuitStop アクション起動フラグ
     ActionRegistry           registry_;   // M5.1: 中央アクションディスパッチャ
     int                      currentVolume_{100};  // M5.3: 現在の音量（0-100）
     MuteState                muteState_;           // M5.3: 最小化連動ミュート状態機械

@@ -6,8 +6,10 @@
 #include "action_registry.h"
 #include "volume_state.h"   // M5.3: 純ロジック（ヘッダオンリー）
 #include "media_source.h"   // M5.4: 純ロジック（ヘッダオンリー）
+#include "restore_state.h"  // M5.5: 純ロジック（ヘッダオンリー）
 
 using namespace yapcr::app;
+using namespace yapcr::config;  // M5.5: RestoreConfig / StateConfig
 
 // ============================================================
 //  tst_shortcuts — M5.1: ActionRegistry / キー正規化 単体テスト
@@ -414,6 +416,84 @@ private slots:
         const QString pls = QStringLiteral("  http://localhost:7144/pls/ABCDEF0123456789ABCDEF0123456789  ");
         QCOMPARE(classifyMediaSource(pls), MediaSourceKind::PlsUrl);
         QCOMPARE(classifyMediaSource(QStringLiteral("\tC:\\video.mp4\n")), MediaSourceKind::LocalPath);
+    }
+
+    // ------------------------------------------------------------------
+    // M5.5: restore_state.h — [restore] × [state] 復元値選択
+    // ------------------------------------------------------------------
+
+    // restoredVolume: restore.volume トグルとクランプ
+    void testRestoredVolume() {
+        RestoreConfig r;
+        StateConfig   s;
+
+        // restore.volume=true → state.volume をクランプして返す
+        r.volume = true;
+        s.volume = 80;
+        QCOMPARE(restoredVolume(r, s), 80);
+
+        // 範囲外の state.volume はクランプされる
+        s.volume = 150;
+        QCOMPARE(restoredVolume(r, s), 100);
+        s.volume = -10;
+        QCOMPARE(restoredVolume(r, s), 0);
+
+        // restore.volume=false → fallback (100)
+        r.volume = false;
+        s.volume = 75;
+        QCOMPARE(restoredVolume(r, s), 100);
+        QCOMPARE(restoredVolume(r, s, 50), 50);  // カスタム fallback
+    }
+
+    // restoredMute: restore.mute トグル
+    void testRestoredMute() {
+        RestoreConfig r;
+        StateConfig   s;
+
+        // restore.mute=true → state.mute の値を返す
+        r.mute = true;
+        s.mute = true;
+        QCOMPARE(restoredMute(r, s), true);
+        s.mute = false;
+        QCOMPARE(restoredMute(r, s), false);
+
+        // restore.mute=false → fallback (false)
+        r.mute = false;
+        s.mute = true;
+        QCOMPARE(restoredMute(r, s), false);
+        QCOMPARE(restoredMute(r, s, true), true);  // カスタム fallback
+    }
+
+    // restoredGeometry: position/size トグルとデフォルト値
+    void testRestoredGeometry() {
+        RestoreConfig r;
+        StateConfig   s;
+        s.window_x = 100; s.window_y = 200;
+        s.window_w = 1280; s.window_h = 720;
+
+        // position=true, size=true → 全て state から取得
+        r.position = true; r.size = true;
+        auto g = restoredGeometry(r, s);
+        QCOMPARE(g.applyPosition, true);
+        QCOMPARE(g.applySize,     true);
+        QCOMPARE(g.x, 100); QCOMPARE(g.y, 200);
+        QCOMPARE(g.w, 1280); QCOMPARE(g.h, 720);
+
+        // position=false → applyPosition=false（x/y はコピーされるが適用はスキップ）
+        r.position = false; r.size = true;
+        g = restoredGeometry(r, s);
+        QCOMPARE(g.applyPosition, false);
+        QCOMPARE(g.w, 1280);
+
+        // size=false → applySize=false・w/h はデフォルト（960×540）
+        r.position = true; r.size = false;
+        g = restoredGeometry(r, s);
+        QCOMPARE(g.applySize, false);
+        QCOMPARE(g.w, 960); QCOMPARE(g.h, 540);
+
+        // カスタムデフォルトサイズ
+        g = restoredGeometry(r, s, 800, 600);
+        QCOMPARE(g.w, 800); QCOMPARE(g.h, 600);
     }
 };
 

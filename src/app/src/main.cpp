@@ -21,7 +21,7 @@ int main(int argc, char** argv) {
     const yapcr::config::Config cfg = yapcr::config::load(configPath);
 
     yapcr::app::MainWindow window(cfg, configPath);
-    window.resize(960, 540);
+    // ウィンドウサイズは MainWindow コンストラクタが config_.state から復元する（M5.5）。
     window.show();
 
     // コマンドライン引数を解析して再生を開始する。

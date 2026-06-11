@@ -7,6 +7,7 @@ qt_add_executable(tst_shortcuts
 
 target_include_directories(tst_shortcuts PRIVATE
     ${CMAKE_SOURCE_DIR}/src/app/src
+    ${CMAKE_SOURCE_DIR}/src/config/include  # restore_state.h → config/config.h 解決用
 )
 
 target_link_libraries(tst_shortcuts PRIVATE
