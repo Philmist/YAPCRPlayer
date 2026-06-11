@@ -56,14 +56,31 @@ find_program(WINDEPLOYQT_EXECUTABLE windeployqt HINTS "${_qt_bin}")
 
 if(WINDEPLOYQT_EXECUTABLE)
     set(_dist "${CMAKE_BINARY_DIR}/dist")
+    # GPLv3 §4/§5/§6: 配布物に本体ライセンス・書面オファー・サードパーティ告知・
+    # 各コンポーネントのライセンス全文を必ず同梱する。
     add_custom_target(deploy
         COMMAND ${CMAKE_COMMAND} -E make_directory "${_dist}"
         COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:YAPCRPlayer>" "${_dist}/"
         COMMAND ${CMAKE_COMMAND} -E copy "${MPV_RUNTIME_DLLS}" "${_dist}/"
         COMMAND "${WINDEPLOYQT_EXECUTABLE}" --no-translations --dir "${_dist}"
                 "${_dist}/$<TARGET_FILE_NAME:YAPCRPlayer>"
+        # --- ライセンス同梱（GPLv3 コンプライアンス） ---
+        COMMAND ${CMAKE_COMMAND} -E copy
+                "${CMAKE_SOURCE_DIR}/LICENSE"
+                "${CMAKE_SOURCE_DIR}/CORRESPONDING-SOURCE.md"
+                "${_dist}/"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "${CMAKE_SOURCE_DIR}/licenses" "${_dist}/licenses"
         DEPENDS YAPCRPlayer
-        COMMENT "windeployqt + libmpv で dist/ を作成"
+        COMMENT "windeployqt + libmpv ＋ ライセンス一式で dist/ を作成"
         VERBATIM
     )
+    # 実際に取得した libmpv の同定情報（fetch-mpv-dev.ps1 が生成。存在時のみ同梱）。
+    if(EXISTS "${MPV_DIR}/PROVENANCE.txt")
+        add_custom_command(TARGET deploy POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy
+                    "${MPV_DIR}/PROVENANCE.txt" "${_dist}/licenses/libmpv-PROVENANCE.txt"
+            VERBATIM
+        )
+    endif()
 endif()

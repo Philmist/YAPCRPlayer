@@ -13,6 +13,8 @@ cmake-build-*/
 # git submodule（tomlplusplus 等）は追跡するため ディレクトリ全体は無視しない。
 /third_party/mpv-dev/
 /third_party/mpv-dev-*.7z
+# 対応ソースのミラー（scripts/mirror-mpv-source.ps1。GPLv3 §6 用・数GB・配布時に別途アーカイブ）
+/third_party/mpv-source-mirror/
 [Dd]ebug/
 [Rr]elease/
 [Xx]64/
@@ -93,7 +95,8 @@ $RECYCLE.BIN/
 
 # ============================================================
 # 注記:
-# - submodule ディレクトリ (mpv/ , peercaststation/) は無視しない。
+# - submodule ディレクトリ (peercaststation/ , third_party/tomlplusplus/) は無視しない。
+#   （mpv submodule は廃止。libmpv はピン留めしたプリビルドを fetch する）
 # - libmpv の DLL/import lib は外部 (MPV_DIR) から参照し配布時に同梱する方針のため、
 #   *.dll / *.lib は意図的にここで広く無視していない（将来 third_party へ
 #   ベンダリングする場合に取りこぼさないため）。ビルド生成物は build/ 配下に出るので

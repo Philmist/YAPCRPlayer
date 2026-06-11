@@ -1,6 +1,3 @@
-[submodule "mpv"]
-	path = mpv
-	url = https://github.com/mpv-player/mpv.git
 [submodule "peercaststation"]
 	path = peercaststation
 	url = https://github.com/kumaryu/peercaststation.git

@@ -55,11 +55,12 @@ app     ── エントリポイント、CLI 解析(path/name/contact)、Sessio
 - 依存:
   - Qt6: Core, Gui, Widgets, Network, **Core5Compat**(Shift_JIS/EUC-JP 用 QTextCodec)。CI は **aqtinstall**。
   - **libmpv**: dev パッケージ（`client.h` ほか + import lib）。`FindMpv`/pkg-config か `MPV_DIR` 指定。
-    配布は LGPL ビルドの `libmpv-2.dll` 同梱。
+    配布は **GPL ビルド**の `libmpv-2.dll` 同梱（本プロジェクトは GPLv3。詳細は §5・`CORRESPONDING-SOURCE.md`）。
   - **toml++**（ヘッダオンリー、FetchContent or submodule）。
   - テスト: Qt Test もしくは GoogleTest/Catch2。
 - 配布: `windeployqt` で Qt DLL/プラグイン収集 ＋ `libmpv-2.dll` 同梱。
-- **submodule**: mpv / peercaststation は取得済み・正常（path・初期化・HEAD 整合を確認済み）。修正不要。
+- **submodule**: peercaststation（プロトコル参照）/ tomlplusplus（依存）のみ。mpv は submodule を廃止
+  （ビルド役割なし・対応ソースにもならないため。libmpv はピン留めしたプリビルドを取得）。
 
 ---
 
@@ -96,7 +97,10 @@ app     ── エントリポイント、CLI 解析(path/name/contact)、Sessio
 
 ## 5. 留意・リスク
 
-- libmpv の Windows 配布物は LGPL 構成を選ぶ（クローズド配布可・LAV/GPL 回避）。
+- libmpv の Windows 配布物は **GPL 構成**（本プロジェクトは GPLv3 のため制約なし）。配布時は GPLv3 §6 の
+  対応ソース提供義務を `CORRESPONDING-SOURCE.md`（書面オファー）＋ `scripts/mirror-mpv-source.ps1`
+  （3 年間保管用ミラー）で履行し、`THIRD-PARTY-NOTICES.md`・`licenses/` を `deploy` で同梱する。
+  fetch スクリプトはリリースを SHA-256 でピン留めし、DLL とライセンス記載の不一致を防ぐ。
 - Core5Compat の Shift_JIS/EUC-JP は実際の板レスポンスで最終確認（したらば=EUC-JP 想定だが要検証）。
 - `--wid` 埋め込み時のリサイズ追従・DPI・全画面遷移は Qt のネイティブウィンドウ属性で要調整。
 - PeerCastStation は legacy `/admin?cmd=` 互換を維持しているが、将来非互換化に備え制御を `peercast` に隔離
