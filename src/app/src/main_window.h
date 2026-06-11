@@ -9,7 +9,9 @@
 
 class QAction;
 class QActionGroup;
+class QContextMenuEvent;
 class QKeyEvent;
+class QMenu;
 class QMouseEvent;
 class QSplitter;
 class QWidget;
@@ -59,6 +61,7 @@ protected:
     void showEvent(QShowEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;                               // M4.3: F=全画面トグル, Esc=全画面解除
     void mouseDoubleClickEvent(QMouseEvent* event) override;                     // M4.3: ダブルクリックで全画面トグル
+    void contextMenuEvent(QContextMenuEvent* event) override;                    // M6: 右クリックコンテキストメニュー
     void changeEvent(QEvent* event) override;                                    // M5.3: 最小化/復帰検出（連動ミュート）
     void closeEvent(QCloseEvent* event) override;                               // M5.5: 終了時一括保存
     bool nativeEvent(const QByteArray& eventType, void* message, qintptr* result) override; // 映像子 HWND クリック検出
@@ -87,14 +90,21 @@ private:
     void leaveFullScreen();   // showNormal() → バー復帰 → サイズモード再適用
     void reapplySizeMode();   // currentSizeMode_ に応じて applyZoom/applyAbsoluteSize/releaseSizeFixed を呼ぶ
 
-    // M4.4: スナップショット保存・フォルダ表示。
+    // M4.4 / M6: スナップショット保存・フォルダ表示。
     void    takeSnapshot();                // S キー / メニューでスナップショットを保存
     void    openSnapshotFolder();          // 保存フォルダをエクスプローラで開く
-    QString snapshotDirectory() const;    // 保存先（Pictures/YAPCRPlayer）。// M5: config化
+    QString snapshotDirectory() const;    // 保存先（config.snapshot.directory、空なら Pictures/YAPCRPlayer）
+
+    // M6: 右クリックコンテキストメニューを構築する（コンストラクタ末尾で1回呼ぶ）。
+    // メニューバー廃止時はここを右クリックの唯一のメニューとする準備。
+    void buildContextMenu();
 
     // M5.3: 音量 / ミュート操作。
     void changeVolume(int delta);          // delta ステップで音量を変更して mpv に適用
     void applyMute();                      // muteState_.effective() を mpv に反映しメニューを同期
+
+    // M6: 一時停止状態をトグルして mpv に反映する。
+    void togglePause();
 
     config::Config           config_;      // M5.0: 起動時ロード済み設定
     QString                  configPath_;  // M5.2: ReloadConfig/OpenConfigFolder 用パス
@@ -151,6 +161,19 @@ private:
     // M5.3: 音量 / ミュート / 最小化
     QAction* actMute_{nullptr};            // 「ミュート」（チェック可・userMute に同期）
     QAction* actMinimizeMute_{nullptr};    // 「最小化時にミュート」（チェック可・config と同期）
+
+    // M6: 再生制御 / 表示トグル
+    bool     paused_{false};               // 一時停止状態（cycle pause と同期）
+    QAction* actPause_{nullptr};           // 「一時停止」（チェック可）
+    bool     isTopmost_{false};            // 最前面フラグ
+    QAction* actTopmost_{nullptr};         // 「最前面」（チェック可）
+    QAction* actToggleTitle_{nullptr};     // 「メニューバー表示切替」（チェック可）
+    QAction* actToggleStatus_{nullptr};    // 「ステータスバー表示切替」（チェック可）
+    QAction* actMaximize_{nullptr};        // 「最大化」
+    QAction* actSagePost_{nullptr};        // 「sage 投稿」（チェック可）
+
+    // M6: 右クリックコンテキストメニュー（将来のメニューバー廃止への準備）
+    QMenu*   contextMenu_{nullptr};
 
     // M5.1: プリセット QAction ポインタ（keyboard dispatch 後の check state 同期用）
     // sizeModeGroup_: actZoomPresets_ / actSizePresets_ / actFreeSize_

@@ -104,6 +104,19 @@ void ResListPane::clearRes()
     popup_->hidePopup();
 }
 
+// M6: ThreadScrollNext/Prev — 1 ページ分スクロール
+void ResListPane::scrollNext()
+{
+    QScrollBar* sb = verticalScrollBar();
+    sb->setValue(sb->value() + sb->pageStep());
+}
+
+void ResListPane::scrollPrev()
+{
+    QScrollBar* sb = verticalScrollBar();
+    sb->setValue(sb->value() - sb->pageStep());
+}
+
 void ResListPane::setByRefProvider(ResQueryFn fn)
 {
     byRefProvider_ = std::move(fn);

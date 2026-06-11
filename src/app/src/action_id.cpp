@@ -34,10 +34,12 @@ const QVector<ActionDef>& actionTable()
         { ActionId::Topmost,           "topmost",           {QStringLiteral("T")}},
         { ActionId::ToggleTitle,       "toggle_title",      {QStringLiteral("X")}},
         { ActionId::ToggleStatus,      "toggle_status",     {QStringLiteral("B")}},
-        { ActionId::ToggleSeek,        "toggle_seek",       {QStringLiteral("V")}},
+        // ToggleSeek/ToggleFrame: このアプリは mpv --wid 直接描画のため独自シークバー/枠 UI を持たない。
+        // デフォルトキー割当なし（対応 UI 要素なし）。
+        { ActionId::ToggleSeek,        "toggle_seek",       {}},
         { ActionId::ToggleBbs,         "toggle_bbs",        {QStringLiteral("C")}},
         { ActionId::ToggleResList,     "toggle_res_list",   {}},
-        { ActionId::ToggleFrame,       "toggle_frame",      {QStringLiteral("Z")}},
+        { ActionId::ToggleFrame,       "toggle_frame",      {}},
         // ---- ズームプリセット × 10 ----
         { ActionId::ZoomPreset1,       "zoom_preset_1",     {QStringLiteral("Ctrl+1")}},
         { ActionId::ZoomPreset2,       "zoom_preset_2",     {QStringLiteral("Ctrl+2")}},

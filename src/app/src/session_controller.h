@@ -51,9 +51,18 @@ public:
     // M3.8: ポーリングタイマ・commandline && contact 自動起動はここに後付けする。
     Q_INVOKABLE void bbsRefresh();
 
-    // BBS に書き込む（名前/メールは空、本文のみの最小構成）。
+    // BBS セッションを完全にリセット（dat 蓄積・キー等を破棄）してから再取得する。
+    // ThreadReset アクション用（スレ先頭から読み直す）。
+    Q_INVOKABLE void bbsReset();
+
+    // BBS に書き込む（名前は空、メールは sage フラグで切替）。
     // 書き込み中は bbsPostFinished が emit されるまで再呼び出し不可（UI 側が無効化する）。
     Q_INVOKABLE void bbsPost(const QString& message);
+
+    // sage 投稿フラグ（true: mail="sage"、false: mail=""）。
+    // 起動時に config_.state.sage で初期化し、SagePost アクションで切替える。
+    bool sage() const { return sage_; }
+    void setSage(bool enabled) { sage_ = enabled; }
 
     // ---- BBS extract クエリ（M3.7 hover ポップアップ用） -----
 
@@ -131,7 +140,7 @@ private:
     static constexpr int kInfoPollIntervalMs  = 30'000;  // 30 秒
     // Watchdog 評価間隔（ms）
     static constexpr int kWatchdogTickMs      = 3'000;   // 3 秒
-    // BBS dat ポーリング間隔（ms）— M3.8。M5 で config 化予定
+    // BBS dat ポーリング間隔（ms）— M3.8
     static constexpr int kBbsPollIntervalMs   = 15'000;  // 15 秒
 
     // PeerCast セッション停止（teardownPeerCast からも呼ぶ。BBS は独立管理）
@@ -149,6 +158,11 @@ private:
     QString name_;
     QString contact_;
     bool    commandline_{false};
+    bool    sage_{true};  // M6: mail 欄制御（true="sage"、false=""）。setSage() で外部から切替可能。
+
+    // M6: B1 — pls URL を UI から開いたとき viewxml の url フィールドで BBS 自動接続するフラグ。
+    // start() で pls URL かつ !commandline_ のとき true にし、onChannelInfo() で1回だけ消費する。
+    bool    autoConnectBbsOnInfo_{false};
 
     QString plsUrl_;     // /pls/ URL（PeerCast セッションのとき設定）
     QString streamUrl_;  // /stream/ URL（解決後）

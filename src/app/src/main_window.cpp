@@ -6,6 +6,7 @@
 #include "res_input_bar.h"
 #include "board_title_bar.h" // M3.7: 掲示板タイトル帯
 #include "res_popup.h"       // M3.7: hover レス・ポップアップ
+#include "about_dialog.h"    // M6: バージョン情報ダイアログ
 #include "bbs/models.h"
 #include "player/mpv_backend.h"
 #include "common/version.h"
@@ -19,6 +20,7 @@
 #include <QAction>
 #include <QActionGroup>
 #include <QClipboard>
+#include <QContextMenuEvent>
 #include <QCursor>
 #include <QDateTime>
 #include <QDebug>
@@ -119,12 +121,28 @@ MainWindow::MainWindow(const config::Config& cfg,
             this, &MainWindow::onMpvLogMessage);
 
     // M4.2: 映像ネイティブサイズを保持し、ズーム%選択中は変化に追従して再適用する。
+    // M6: start_zoom_100=true のとき、Free モードのままなら最初の映像サイズ確定時に 100% ズームを適用する。
     connect(mpv_, &player::MpvBackend::videoSizeChanged, this, [this](int w, int h) {
         qDebug() << "[mpv] videoSizeChanged:" << w << "x" << h;
         lastVideoW_ = w;
         lastVideoH_ = h;
         if (currentSizeMode_ == SizeMode::Zoom && currentZoom_ > 0) {
             applyZoom(currentZoom_);
+        } else if (currentSizeMode_ == SizeMode::Free && config_.display.start_zoom_100) {
+            // Free モードかつ start_zoom_100 有効 → 映像ロードのたびに 100% ズームへ自動切替
+            currentSizeMode_ = SizeMode::Zoom;
+            currentZoom_     = 100;
+            applyZoom(100);
+            // sizeModeGroup_ のチェック状態を 100% ズームプリセットに合わせる
+            if (actFreeSize_) { actFreeSize_->setChecked(false); }
+            // 100% に対応するズームプリセット QAction があれば checked にする
+            const QList<int> zooms = zoomPresets();
+            for (int i = 0; i < zooms.size() && i < actZoomPresets_.size(); ++i) {
+                if (zooms[i] == 100) {
+                    actZoomPresets_[i]->setChecked(true);
+                    break;
+                }
+            }
         }
     });
 
@@ -207,6 +225,9 @@ MainWindow::MainWindow(const config::Config& cfg,
     // [restore] トグルが true のものだけ [state] 値を適用（純ロジックは restore_state.h）。
     currentVolume_ = restoredVolume(config_.restore, config_.state);
     muteState_.setUser(restoredMute(config_.restore, config_.state));
+
+    // M6: sage フラグを config の最終保存値で初期化する（SagePost アクションで live トグル）。
+    session_->setSage(config_.state.sage);
 
     // M5.1/M5.2: アクションレジストリ設定 ——————————————————————————————————————————
     // TOML [shortcuts] の差分をデフォルト表に上書きしてキーマップを構築する。
@@ -362,6 +383,118 @@ MainWindow::MainWindow(const config::Config& cfg,
         }
     }
 
+    // =========================================================================
+    // M6: A1 — 再生制御（Pause / Seek）
+    // =========================================================================
+    // Pause(Space): pause プロパティを cycle で反転する。
+    // ライブ配信中は mpv 側でシーク不可なため自然に no-op になる。
+    registry_.on(ActionId::Pause, [this]{
+        togglePause();
+    });
+
+    // Seek 6種: relative シーク（Low=小, 通常=標準, High=大）。
+    // 秒数はハードコード既定（config 化は別途）。
+    registry_.on(ActionId::SeekForward,    [this]{ mpv_->command({QStringLiteral("seek"), QStringLiteral("10"),  QStringLiteral("relative")}); });
+    registry_.on(ActionId::SeekBack,       [this]{ mpv_->command({QStringLiteral("seek"), QStringLiteral("-10"), QStringLiteral("relative")}); });
+    registry_.on(ActionId::SeekForwardLow, [this]{ mpv_->command({QStringLiteral("seek"), QStringLiteral("3"),   QStringLiteral("relative")}); });
+    registry_.on(ActionId::SeekBackLow,    [this]{ mpv_->command({QStringLiteral("seek"), QStringLiteral("-3"),  QStringLiteral("relative")}); });
+    registry_.on(ActionId::SeekForwardHigh,[this]{ mpv_->command({QStringLiteral("seek"), QStringLiteral("60"),  QStringLiteral("relative")}); });
+    registry_.on(ActionId::SeekBackHigh,   [this]{ mpv_->command({QStringLiteral("seek"), QStringLiteral("-60"), QStringLiteral("relative")}); });
+
+    // =========================================================================
+    // M6: A2 — 表示トグル（Topmost / ToggleTitle / ToggleStatus / Maximize）
+    // =========================================================================
+    // Topmost(T): WindowStaysOnTopHint の ON/OFF。
+    // setWindowFlag 後に show() を再呼び出ししないとウィンドウが再描画されないため必要。
+    registry_.on(ActionId::Topmost, [this]{
+        isTopmost_ = !isTopmost_;
+        setWindowFlag(Qt::WindowStaysOnTopHint, isTopmost_);
+        show();  // フラグ変更を実ウィンドウに反映するため再表示
+        if (actTopmost_) { actTopmost_->setChecked(isTopmost_); }
+        statusBar()->showMessage(isTopmost_ ? tr("最前面: ON") : tr("最前面: OFF"), 2000);
+    });
+
+    // ToggleTitle(X): メニューバーの表示/非表示。
+    // メニューバーを隠した後は右クリックメニュー or X キーで戻す。
+    // 将来メニューバーが右クリックメニューに移行した際、この実装も併せて見直すこと。
+    registry_.on(ActionId::ToggleTitle, [this]{
+        const bool nowVisible = !menuBar()->isVisible();
+        menuBar()->setVisible(nowVisible);
+        if (actToggleTitle_) { actToggleTitle_->setChecked(nowVisible); }
+    });
+
+    // ToggleStatus(B): ステータスバーの表示/非表示。
+    registry_.on(ActionId::ToggleStatus, [this]{
+        const bool nowVisible = !statusBar()->isVisible();
+        statusBar()->setVisible(nowVisible);
+        if (actToggleStatus_) { actToggleStatus_->setChecked(nowVisible); }
+    });
+
+    // Maximize: 最大化/通常サイズのトグル。
+    // 全画面中に呼ばれた場合は全画面を解除してから最大化する。
+    registry_.on(ActionId::Maximize, [this]{
+        if (isFullScreen()) {
+            leaveFullScreen();
+        }
+        if (isMaximized()) {
+            showNormal();
+        } else {
+            showMaximized();
+        }
+        if (actMaximize_) { actMaximize_->setChecked(isMaximized()); }
+    });
+
+    // =========================================================================
+    // M6: A3 — BBS 操作（ThreadReload / ThreadReset / SagePost / ThreadScroll）
+    // =========================================================================
+    // ThreadReload: レス一覧をクリアして再フェッチ（bbsRefresh と同義）。
+    registry_.on(ActionId::ThreadReload, [this]{
+        resListPane_->clearRes();
+        session_->bbsRefresh();
+    });
+
+    // ThreadReset: dat 蓄積をリセットして先頭から読み直す。
+    registry_.on(ActionId::ThreadReset, [this]{
+        resListPane_->clearRes();
+        session_->bbsReset();
+    });
+
+    // SagePost: sage フラグをトグルしてメニュー状態と config に反映する。
+    registry_.on(ActionId::SagePost, [this]{
+        config_.state.sage = !config_.state.sage;
+        session_->setSage(config_.state.sage);
+        if (actSagePost_) { actSagePost_->setChecked(config_.state.sage); }
+        statusBar()->showMessage(
+            config_.state.sage ? tr("sage: ON") : tr("sage: OFF"), 2000);
+    });
+
+    // ThreadScrollNext/Prev: レス一覧ペインを 1 ページ分スクロール。
+    registry_.on(ActionId::ThreadScrollNext, [this]{ resListPane_->scrollNext(); });
+    registry_.on(ActionId::ThreadScrollPrev, [this]{ resListPane_->scrollPrev(); });
+
+    // =========================================================================
+    // M6: A4 — Log / Version
+    // =========================================================================
+    // Log(L): ステータスバーを表示して直近 mpv ログをトグル表示する。
+    // 簡易実装: ToggleStatus と同じ動作にして "ログを見るにはステータスバーを" と案内。
+    // 将来専用ログビューアを実装する場合はここを差し替える。
+    registry_.on(ActionId::Log, [this]{
+        const bool nowVisible = !statusBar()->isVisible();
+        statusBar()->setVisible(nowVisible);
+        if (actToggleStatus_) { actToggleStatus_->setChecked(nowVisible); }
+    });
+
+    // Version: バージョン情報ダイアログを表示する。
+    registry_.on(ActionId::Version, [this]{
+        AboutDialog dlg(this);
+        dlg.exec();
+    });
+
+    // =========================================================================
+    // M6: ここでコンテキストメニューを構築する（メニュー構築完了後に呼ぶ）。
+    // 実際の buildContextMenu() 呼び出しはメニューバー構築後の末尾で行う。
+    // =========================================================================
+
     // M5.4: 「ファイル」メニュー（最左。ファイル/URL を開く・コピー・ブラウザ） ————————
     {
         QMenu* fileMenu = menuBar()->addMenu(tr("ファイル(&F)"));
@@ -423,6 +556,29 @@ MainWindow::MainWindow(const config::Config& cfg,
         actToggleResList_ = menu->addAction(tr("レス一覧 (&L) 表示切替"));
         connect(actToggleResList_, &QAction::triggered, this,
                 [this]{ registry_.trigger(ActionId::ToggleResList); });
+
+        // M6: 一時停止
+        menu->addSeparator();
+        actPause_ = menu->addAction(tr("一時停止 (&P)ause\tSpace"));
+        actPause_->setCheckable(true);
+        actPause_->setChecked(false);
+        connect(actPause_, &QAction::triggered, this,
+                [this]{ registry_.trigger(ActionId::Pause); });
+
+        // M6: BBS 操作（スレリセット / sage）
+        menu->addSeparator();
+        QAction* actThreadReload = menu->addAction(tr("スレ再読込"));
+        connect(actThreadReload, &QAction::triggered, this,
+                [this]{ registry_.trigger(ActionId::ThreadReload); });
+        QAction* actThreadReset = menu->addAction(tr("スレリセット（先頭から）"));
+        connect(actThreadReset, &QAction::triggered, this,
+                [this]{ registry_.trigger(ActionId::ThreadReset); });
+        menu->addSeparator();
+        actSagePost_ = menu->addAction(tr("sage 投稿"));
+        actSagePost_->setCheckable(true);
+        actSagePost_->setChecked(config_.state.sage);
+        connect(actSagePost_, &QAction::triggered, this,
+                [this]{ registry_.trigger(ActionId::SagePost); });
 
         // M5.3: ミュート / 最小化 / 最小化時ミュート
         menu->addSeparator();
@@ -595,7 +751,43 @@ MainWindow::MainWindow(const config::Config& cfg,
         QAction* actReloadConfig = viewMenu->addAction(tr("設定を再読み込み"));
         connect(actReloadConfig, &QAction::triggered, this,
                 [this]{ registry_.trigger(ActionId::ReloadConfig); });
+
+        // M6: ウィンドウ制御（最前面 / タイトル帯 / ステータスバー / 最大化）
+        viewMenu->addSeparator();
+        actTopmost_ = viewMenu->addAction(tr("最前面 (&T)\tT"));
+        actTopmost_->setCheckable(true);
+        actTopmost_->setChecked(isTopmost_);
+        connect(actTopmost_, &QAction::triggered, this,
+                [this]{ registry_.trigger(ActionId::Topmost); });
+
+        actToggleTitle_ = viewMenu->addAction(tr("メニューバー表示切替 (&X)\tX"));
+        actToggleTitle_->setCheckable(true);
+        actToggleTitle_->setChecked(true);  // 初期は表示中
+        connect(actToggleTitle_, &QAction::triggered, this,
+                [this]{ registry_.trigger(ActionId::ToggleTitle); });
+
+        actToggleStatus_ = viewMenu->addAction(tr("ステータスバー表示切替 (&B)\tB"));
+        actToggleStatus_->setCheckable(true);
+        actToggleStatus_->setChecked(true);  // 初期は表示中
+        connect(actToggleStatus_, &QAction::triggered, this,
+                [this]{ registry_.trigger(ActionId::ToggleStatus); });
+
+        actMaximize_ = viewMenu->addAction(tr("最大化"));
+        connect(actMaximize_, &QAction::triggered, this,
+                [this]{ registry_.trigger(ActionId::Maximize); });
     }
+
+    // M6: 「ヘルプ」メニュー（バージョン情報）————————————————————————————————————
+    {
+        QMenu* helpMenu = menuBar()->addMenu(tr("ヘルプ(&H)"));
+
+        QAction* actVersion = helpMenu->addAction(tr("バージョン情報(&A)..."));
+        connect(actVersion, &QAction::triggered, this,
+                [this]{ registry_.trigger(ActionId::Version); });
+    }
+
+    // M6: 右クリックコンテキストメニューを構築する（メニュー構築完了後に呼ぶ）。
+    buildContextMenu();
 
     // M5.5: ウィンドウジオメトリの起動時復元 ————————————————————————————————————
     // resize は show() 前でも有効（Qt はウィンドウ非表示時に仮想ジオメトリを保持）。
@@ -607,6 +799,32 @@ MainWindow::MainWindow(const config::Config& cfg,
             const QPoint pos(geo.x, geo.y);
             if (QGuiApplication::screenAt(pos) != nullptr) {
                 move(pos);
+            }
+        }
+    }
+
+    // M6: フィット/アスペクトモードの起動時復元（restore.aspect=true のとき）。
+    // メニューアクションへのポインタが確定した後（buildContextMenu() 以降）に実行する。
+    // applyFitMode() は mpv 未 init なら no-op — 実際の適用は fileLoaded シグナル受信後。
+    {
+        const auto asp = restoredAspect(config_.restore, config_.state);
+        if (asp.apply) {
+            currentFit_     = asp.fitMode;
+            currentAspectX_ = asp.aspectX;
+            currentAspectY_ = asp.aspectY;
+            applyFitMode();
+            // メニューのチェック状態を更新する（近似マッチ）
+            if (currentFit_ == FitMode::Inscribe && currentAspectX_ == 0) {
+                if (actInscribeFit_) { actInscribeFit_->setChecked(true); }
+            } else if (currentFit_ == FitMode::AspectOverride && currentAspectX_ > 0) {
+                // プリセットと一致するアスペクトがあれば checked にする
+                const auto presets = aspectPresets();
+                for (int i = 0; i < presets.size() && i < actAspectPresetActions_.size(); ++i) {
+                    if (presets[i].x == currentAspectX_ && presets[i].y == currentAspectY_) {
+                        actAspectPresetActions_[i]->setChecked(true);
+                        break;
+                    }
+                }
             }
         }
     }
@@ -845,25 +1063,44 @@ void MainWindow::mouseDoubleClickEvent(QMouseEvent* event)
 
 // M4.4: スナップショット ——————————————————————————————————————————————————————
 
-// スナップショットの保存先ディレクトリを返す。ディレクトリ自体は作成しない。
-// ハードコード既定（Pictures/YAPCRPlayer）。// M5: config化（保存先フォルダ）
+// M6: スナップショットの保存先ディレクトリを返す。ディレクトリ自体は作成しない。
+// config_.snapshot.directory が空の場合は Pictures/YAPCRPlayer を既定として使う。
 QString MainWindow::snapshotDirectory() const
 {
+    if (!config_.snapshot.directory.isEmpty()) {
+        return config_.snapshot.directory;
+    }
     const QString base =
         QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
     return base + QStringLiteral("/YAPCRPlayer");
 }
 
-// 現在の映像フレームを OSD/字幕なしの素フレームで保存する。
-// video フラグ = OSD/字幕なし・元解像度。無映像時は mpv が書き出しに失敗するが M4 ではガードしない。
-// 形式 PNG 固定。// M5: config化（形式・JPEG 品質）
+// M6: 現在の映像フレームを OSD/字幕なしの素フレームで保存する。
+// video フラグ = OSD/字幕なし・元解像度。無映像時は mpv が書き出しに失敗するが補正しない。
+// 形式は config_.snapshot.format（"png" / "jpg" / "bmp"）に従う。JPEG の場合は品質も適用。
 void MainWindow::takeSnapshot()
 {
-    const QString dir  = snapshotDirectory();
+    const QString dir = snapshotDirectory();
     QDir().mkpath(dir);  // 保存先フォルダが無ければ自動作成
+
+    // 形式判定
+    SnapshotFormat fmt = SnapshotFormat::Png;
+    const QString fmtStr = config_.snapshot.format.toLower();
+    if (fmtStr == QLatin1String("jpg") || fmtStr == QLatin1String("jpeg")) {
+        fmt = SnapshotFormat::Jpg;
+    } else if (fmtStr == QLatin1String("bmp")) {
+        fmt = SnapshotFormat::Bmp;
+    }
+
     const QString path = dir + QStringLiteral("/")
-                       + snapshotFilename(QDateTime::currentDateTime(), SnapshotFormat::Png);
-    // screenshot-to-file <path> <flags>: 拡張子から形式を自動判定（.png→PNG）
+                       + snapshotFilename(QDateTime::currentDateTime(), fmt);
+
+    // JPEG 品質を mpv オプションに設定してから保存
+    if (fmt == SnapshotFormat::Jpg) {
+        mpv_->setProperty(QStringLiteral("screenshot-jpeg-quality"),
+                          QString::number(config_.snapshot.jpeg_quality));
+    }
+    // screenshot-to-file <path> <flags>: 拡張子から形式を自動判定
     mpv_->command({ QStringLiteral("screenshot-to-file"), path, QStringLiteral("video") });
     onStatusMessage(tr("スナップショットを保存: %1").arg(path));
 }
@@ -931,9 +1168,13 @@ void MainWindow::closeEvent(QCloseEvent* event)
     config_.state.window_y = g.y();
     config_.state.window_w = g.width();
     config_.state.window_h = g.height();
-    config_.state.volume   = currentVolume_;
-    config_.state.mute     = muteState_.userMute();
-    // sage はロード値をそのまま保持（live トグル未実装）。データ欠落させずに書き戻す。
+    config_.state.volume    = currentVolume_;
+    config_.state.mute      = muteState_.userMute();
+    // config_.state.sage は SagePost アクションで直接更新済み。そのまま書き戻す。
+    // M6: フィット/アスペクト状態を保存（restore.aspect=true のとき次回起動時に復元される）。
+    config_.state.fit_mode  = fitModeToString(currentFit_);
+    config_.state.aspect_x  = currentAspectX_;
+    config_.state.aspect_y  = currentAspectY_;
 
     config::save(config_, configPath_);
     QMainWindow::closeEvent(event);
@@ -956,6 +1197,77 @@ bool MainWindow::nativeEvent(const QByteArray& eventType, void* message, qintptr
     }
 #endif
     return QMainWindow::nativeEvent(eventType, message, result);
+}
+
+// M6: 右クリックコンテキストメニューを表示する。
+// メニューバーが非表示のときでも contextMenu_ を通じてアクションにアクセスできる。
+// 将来メニューバーを廃止して右クリックメニューに一本化する際の基盤。
+void MainWindow::contextMenuEvent(QContextMenuEvent* event)
+{
+    if (contextMenu_) {
+        contextMenu_->exec(event->globalPos());
+    }
+}
+
+// M6: 右クリックコンテキストメニューを構築する。
+// コンストラクタ末尾でメニューバー構築後に1回呼ぶ。
+// アクションはすべて registry_.trigger() 経由で実行するため、
+// 将来メニューバーを廃止してここに統合しても配線は変わらない。
+void MainWindow::buildContextMenu()
+{
+    contextMenu_ = new QMenu(this);
+
+    // ---- ファイル ----
+    contextMenu_->addAction(tr("開く..."), this,
+        [this]{ registry_.trigger(ActionId::OpenFileDialog); });
+    contextMenu_->addAction(tr("クリップボードから開く"), this,
+        [this]{ registry_.trigger(ActionId::OpenFromClipboard); });
+    contextMenu_->addSeparator();
+
+    // ---- 再生制御 ----
+    contextMenu_->addAction(tr("一時停止\tSpace"), this,
+        [this]{ registry_.trigger(ActionId::Pause); });
+    contextMenu_->addAction(tr("再接続"), this,
+        [this]{ registry_.trigger(ActionId::Bump); });
+    contextMenu_->addAction(tr("切断"), this,
+        [this]{ registry_.trigger(ActionId::Stop); });
+    contextMenu_->addAction(tr("再読込"), this,
+        [this]{ registry_.trigger(ActionId::Rebuild); });
+    contextMenu_->addSeparator();
+
+    // ---- BBS ----
+    contextMenu_->addAction(tr("BBS 取得/更新"), this,
+        [this]{ registry_.trigger(ActionId::ThreadRefresh); });
+    contextMenu_->addAction(tr("スレリセット（先頭から）"), this,
+        [this]{ registry_.trigger(ActionId::ThreadReset); });
+    contextMenu_->addSeparator();
+
+    // ---- 表示 ----
+    contextMenu_->addAction(tr("全画面\tF"), this,
+        [this]{ registry_.trigger(ActionId::FullScreen); });
+    contextMenu_->addAction(tr("最前面\tT"), this,
+        [this]{ registry_.trigger(ActionId::Topmost); });
+    contextMenu_->addAction(tr("メニューバー表示切替\tX"), this,
+        [this]{ registry_.trigger(ActionId::ToggleTitle); });
+    contextMenu_->addSeparator();
+
+    // ---- その他 ----
+    contextMenu_->addAction(tr("バージョン情報..."), this,
+        [this]{ registry_.trigger(ActionId::Version); });
+    contextMenu_->addSeparator();
+    contextMenu_->addAction(tr("終了"), this,
+        [this]{ registry_.trigger(ActionId::Quit); });
+}
+
+// M6: 一時停止をトグルする。
+// mpv の "cycle pause" コマンドで内部状態を反転させる。
+// ライブ配信（ライブストリーム）では mpv が自然に無視する。
+void MainWindow::togglePause()
+{
+    paused_ = !paused_;
+    mpv_->command({ QStringLiteral("cycle"), QStringLiteral("pause") });
+    if (actPause_) { actPause_->setChecked(paused_); }
+    statusBar()->showMessage(paused_ ? tr("一時停止") : tr("再生"), 2000);
 }
 
 }  // namespace yapcr::app

@@ -32,6 +32,10 @@ public:
     // 表示をリセットし既出件数を 0 に戻す。BBS 取得/更新前に呼ぶ。
     void clearRes();
 
+    // M6: レス一覧を 1 ページ分下方向 / 上方向にスクロールする（ThreadScrollNext/Prev 用）。
+    void scrollNext();
+    void scrollPrev();
+
     // M3.7: hover ポップアップ用クエリプロバイダを注入する（MainWindow から呼ぶ）。
     using ResQueryFn   = std::function<QList<yapcr::bbs::ResInfo>(int)>;
     using RangeQueryFn = std::function<QList<yapcr::bbs::ResInfo>(yapcr::bbs::Range)>;

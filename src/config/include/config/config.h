@@ -61,13 +61,17 @@ struct PlaybackConfig {
 };
 
 struct StateConfig {
-    int  window_x{0};
-    int  window_y{0};
-    int  window_w{960};
-    int  window_h{540};
-    int  volume  {100};
-    bool mute    {false};
-    bool sage    {false};  // mail 欄代替（PCRPlayer dialog.bbs.sage 相当）
+    int     window_x{0};
+    int     window_y{0};
+    int     window_w{960};
+    int     window_h{540};
+    int     volume  {100};
+    bool    mute    {false};
+    bool    sage    {false};   // mail 欄代替（PCRPlayer dialog.bbs.sage 相当）
+    // M6: restore.aspect=true のとき復元するフィット/アスペクト状態
+    QString fit_mode{QStringLiteral("inscribe")};  // "inscribe"/"stretch"/"fill"/"unscaled"
+    int     aspect_x{0};  // アスペクト比 X（0 = デフォルト内接）
+    int     aspect_y{0};  // アスペクト比 Y
 };
 
 // ---------- トップレベル ----------

@@ -26,6 +26,10 @@ qt_add_executable(YAPCRPlayer WIN32
     src/shortcut_keys.h
     src/action_registry.cpp    # M5.1: 中央アクションディスパッチャ
     src/action_registry.h
+    src/about_dialog.cpp       # M6: バージョン情報ダイアログ
+    src/about_dialog.h
+    src/media_source.h         # M5.4: 再生ソース種別判定（ヘッダオンリー）
+    src/restore_state.h        # M5.5: [restore]×[state] 復元値選択（ヘッダオンリー）
 )
 
 target_link_libraries(YAPCRPlayer PRIVATE

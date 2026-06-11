@@ -77,6 +77,11 @@ void SessionController::start(const QString& path,
     if (commandline_ && !contact_.isEmpty()) {
         bbsRefresh();
     }
+
+    // M6: B1 — pls URL を UI（クリップボード/ファイルダイアログ）から開いた場合、
+    // contact が未指定でも viewxml の url フィールドで BBS を自動接続する。
+    // onChannelInfo() が contact を取得し次第 bbsRefresh() を呼ぶ。
+    autoConnectBbsOnInfo_ = peca.valid && !commandline_;
 }
 
 // ---- 手動操作スロット --------------------------------------------------------
@@ -222,6 +227,15 @@ void SessionController::onChannelInfo(const peercast::ChannelInfo& info) {
     const QString status = peercast::formatStatus(info);
     if (!title.isEmpty())  { emit titleChanged(title); }
     if (!status.isEmpty()) { emit statusMessage(status); }
+
+    // M6: B1 — pls URL を UI から開いたとき、初回 viewxml 受信で contact を自動設定して BBS 接続する。
+    // autoConnectBbsOnInfo_ は start() で1回セットされ、ここで1回だけ消費する（以降は通常 poll）。
+    if (autoConnectBbsOnInfo_ && !info.url.isEmpty() && contact_.isEmpty()) {
+        autoConnectBbsOnInfo_ = false;
+        contact_ = info.url;
+        emit statusMessage(tr("BBS を自動接続中: %1").arg(contact_));
+        bbsRefresh();
+    }
 }
 
 void SessionController::onInfoFailed() {
@@ -313,6 +327,29 @@ void SessionController::bbsRefresh()
     bbsPollTimer_->start();  // 既に動いていても start() でタイマをリセット
 }
 
+// M6: BBS セッションを完全リセット（dat 蓄積・キー等を破棄）して再取得する。
+// init() 内で store_.reset() が呼ばれるため先頭レスから読み直す。
+// ThreadReset アクション用。UI 側 (MainWindow) は resListPane_->clearRes() を先に呼ぶこと。
+void SessionController::bbsReset()
+{
+    if (contact_.isEmpty()) {
+        emit statusMessage(tr("掲示板 URL が設定されていません"));
+        return;
+    }
+    // bbsRefresh() との違い: init() で store を reset → 既読レス蓄積をクリアして最初から読む
+    if (!bbs_->init(contact_)) {
+        emit statusMessage(tr("掲示板 URL の解析に失敗しました: %1").arg(contact_));
+        return;
+    }
+    emit statusMessage(tr("BBS をリセット中..."));
+    bbs_->loadSetting();
+    bbs_->loadDat();
+
+    if (bbsPollTimer_) {
+        bbsPollTimer_->start();  // タイマをリセット
+    }
+}
+
 void SessionController::bbsPost(const QString& message)
 {
     if (!bbs_->isValid()) {
@@ -320,9 +357,9 @@ void SessionController::bbsPost(const QString& message)
         emit bbsPostFinished(false);
         return;
     }
-    // 名前=空、メール=sage（M3.8 既定）。
-    // M5: メニューから sage on/off 切替、名前入力を config 化する。
-    bbs_->post(QString{}, QStringLiteral("sage"), message);
+    // 名前=空、メール=sage フラグで切替（setSage() で外部から制御）。
+    const QString mail = sage_ ? QStringLiteral("sage") : QString{};
+    bbs_->post(QString{}, mail, message);
 }
 
 // ---- BBS シグナル受信スロット（M3.6）----------------------------------------

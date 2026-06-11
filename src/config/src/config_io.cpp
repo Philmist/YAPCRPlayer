@@ -49,9 +49,10 @@ Config Config::makeDefault()
         {QStringLiteral("topmost"),          {QStringLiteral("T")}},
         {QStringLiteral("toggle_title"),     {QStringLiteral("X")}},
         {QStringLiteral("toggle_status"),    {QStringLiteral("B")}},
-        {QStringLiteral("toggle_seek"),      {QStringLiteral("V")}},
+        // toggle_seek / toggle_frame: このアプリは独自シークバー/枠 UI を持たないため割当なし
+        {QStringLiteral("toggle_seek"),      {}},
         {QStringLiteral("toggle_bbs"),       {QStringLiteral("C")}},
-        {QStringLiteral("toggle_frame"),     {QStringLiteral("Z")}},
+        {QStringLiteral("toggle_frame"),     {}},
         {QStringLiteral("zoom_preset_1"),    {QStringLiteral("Ctrl+1")}},
         {QStringLiteral("zoom_preset_2"),    {QStringLiteral("Ctrl+2")}},
         {QStringLiteral("zoom_preset_3"),    {QStringLiteral("Ctrl+3")}},
@@ -237,13 +238,17 @@ Config parseTable(const toml::table& root)
 
     // ---- [state] ----
     if (auto* s = root["state"].as_table()) {
-        c.state.window_x = getIntOr (*s, "window_x", c.state.window_x);
-        c.state.window_y = getIntOr (*s, "window_y", c.state.window_y);
-        c.state.window_w = getIntOr (*s, "window_w", c.state.window_w);
-        c.state.window_h = getIntOr (*s, "window_h", c.state.window_h);
-        c.state.volume   = getIntOr (*s, "volume",   c.state.volume);
-        c.state.mute     = getBoolOr(*s, "mute",     c.state.mute);
-        c.state.sage     = getBoolOr(*s, "sage",     c.state.sage);
+        c.state.window_x  = getIntOr   (*s, "window_x",  c.state.window_x);
+        c.state.window_y  = getIntOr   (*s, "window_y",  c.state.window_y);
+        c.state.window_w  = getIntOr   (*s, "window_w",  c.state.window_w);
+        c.state.window_h  = getIntOr   (*s, "window_h",  c.state.window_h);
+        c.state.volume    = getIntOr   (*s, "volume",    c.state.volume);
+        c.state.mute      = getBoolOr  (*s, "mute",      c.state.mute);
+        c.state.sage      = getBoolOr  (*s, "sage",      c.state.sage);
+        // M6: restore.aspect 用
+        c.state.fit_mode  = getStringOr(*s, "fit_mode",  c.state.fit_mode);
+        c.state.aspect_x  = getIntOr   (*s, "aspect_x",  c.state.aspect_x);
+        c.state.aspect_y  = getIntOr   (*s, "aspect_y",  c.state.aspect_y);
     }
 
     return c;
@@ -343,13 +348,17 @@ toml::table buildTable(const Config& c)
 
     // [state]
     root.insert("state", toml::table{{
-        {"window_x", static_cast<int64_t>(c.state.window_x)},
-        {"window_y", static_cast<int64_t>(c.state.window_y)},
-        {"window_w", static_cast<int64_t>(c.state.window_w)},
-        {"window_h", static_cast<int64_t>(c.state.window_h)},
-        {"volume",   static_cast<int64_t>(c.state.volume)},
-        {"mute",     c.state.mute},
-        {"sage",     c.state.sage},
+        {"window_x",  static_cast<int64_t>(c.state.window_x)},
+        {"window_y",  static_cast<int64_t>(c.state.window_y)},
+        {"window_w",  static_cast<int64_t>(c.state.window_w)},
+        {"window_h",  static_cast<int64_t>(c.state.window_h)},
+        {"volume",    static_cast<int64_t>(c.state.volume)},
+        {"mute",      c.state.mute},
+        {"sage",      c.state.sage},
+        // M6: restore.aspect 用
+        {"fit_mode",  ss(c.state.fit_mode)},
+        {"aspect_x",  static_cast<int64_t>(c.state.aspect_x)},
+        {"aspect_y",  static_cast<int64_t>(c.state.aspect_y)},
     }});
 
     return root;
