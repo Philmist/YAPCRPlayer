@@ -5,6 +5,7 @@
 #include "display_modes.h"   // M4.1: FitMode
 #include "config/config.h"   // M5.0: 設定構造体
 #include "action_registry.h" // M5.1: 中央アクションディスパッチャ
+#include "volume_state.h"    // M5.3: 音量クランプ・最小化連動ミュート状態機械
 
 class QAction;
 class QActionGroup;
@@ -58,6 +59,7 @@ protected:
     void showEvent(QShowEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;                               // M4.3: F=全画面トグル, Esc=全画面解除
     void mouseDoubleClickEvent(QMouseEvent* event) override;                     // M4.3: ダブルクリックで全画面トグル
+    void changeEvent(QEvent* event) override;                                    // M5.3: 最小化/復帰検出（連動ミュート）
     bool nativeEvent(const QByteArray& eventType, void* message, qintptr* result) override; // 映像子 HWND クリック検出
 
 private slots:
@@ -88,9 +90,15 @@ private:
     void    openSnapshotFolder();          // 保存フォルダをエクスプローラで開く
     QString snapshotDirectory() const;    // 保存先（Pictures/YAPCRPlayer）。// M5: config化
 
+    // M5.3: 音量 / ミュート操作。
+    void changeVolume(int delta);          // delta ステップで音量を変更して mpv に適用
+    void applyMute();                      // muteState_.effective() を mpv に反映しメニューを同期
+
     config::Config           config_;      // M5.0: 起動時ロード済み設定
     QString                  configPath_;  // M5.2: ReloadConfig/OpenConfigFolder 用パス
     ActionRegistry           registry_;   // M5.1: 中央アクションディスパッチャ
+    int                      currentVolume_{100};  // M5.3: 現在の音量（0-100）
+    MuteState                muteState_;           // M5.3: 最小化連動ミュート状態機械
     VideoHostWidget*         videoWidget_{nullptr};
     player::MpvBackend*      mpv_{nullptr};
     SessionController*       session_{nullptr};
@@ -136,6 +144,10 @@ private:
     // M4.4: スナップショット
     QAction* actSnapshot_{nullptr};        // 「スナップショット保存」アクション
     QAction* actSnapshotFolder_{nullptr};  // 「保存フォルダを開く」アクション
+
+    // M5.3: 音量 / ミュート / 最小化
+    QAction* actMute_{nullptr};            // 「ミュート」（チェック可・userMute に同期）
+    QAction* actMinimizeMute_{nullptr};    // 「最小化時にミュート」（チェック可・config と同期）
 
     // M5.1: プリセット QAction ポインタ（keyboard dispatch 後の check state 同期用）
     // sizeModeGroup_: actZoomPresets_ / actSizePresets_ / actFreeSize_

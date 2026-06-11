@@ -4,6 +4,7 @@
 #include "action_id.h"
 #include "shortcut_keys.h"
 #include "action_registry.h"
+#include "volume_state.h"   // M5.3: 純ロジック（ヘッダオンリー）
 
 using namespace yapcr::app;
 
@@ -298,6 +299,70 @@ private slots:
         const auto merged   = mergeShortcuts({});
         const auto defaults = defaultKeyMap();
         QCOMPARE(merged, defaults);
+    }
+
+    // ------------------------------------------------------------------
+    // 8. M5.3: 音量クランプ / ステップ ＋ MuteState 状態遷移
+    // ------------------------------------------------------------------
+
+    // applyVolumeStep: 通常域・クランプ上限・クランプ下限
+    void testApplyVolumeStep() {
+        // 通常域: 50 + 5 = 55
+        QCOMPARE(applyVolumeStep(50,  5),   55);
+        // 通常域: 50 - 5 = 45
+        QCOMPARE(applyVolumeStep(50, -5),   45);
+        // 上限クランプ: 98 + 5 = 100（切り捨てなし）
+        QCOMPARE(applyVolumeStep(98,  5),  100);
+        // 下限クランプ: 2 - 5 = 0
+        QCOMPARE(applyVolumeStep(2,  -5),    0);
+        // 既に上限: 100 + 1 = 100
+        QCOMPARE(applyVolumeStep(100, 1),  100);
+        // 既に下限: 0 - 1 = 0
+        QCOMPARE(applyVolumeStep(0,  -1),    0);
+    }
+
+    // MuteState: toggleUser で effective が反転すること
+    void testMuteState_toggleUser() {
+        MuteState m;
+        QVERIFY(!m.effective());   // 初期: ミュートなし
+        m.toggleUser();
+        QVERIFY(m.effective());    // ON
+        QVERIFY(m.userMute());
+        m.toggleUser();
+        QVERIFY(!m.effective());   // OFF に戻る
+    }
+
+    // MuteState: 手動ミュートなし → 最小化で自動ミュート → 復帰で解除
+    void testMuteState_autoMuteLifecycle() {
+        MuteState m;
+        // minimize_mute=true で最小化 → 自動ミュート
+        m.onMinimize(/*minimizeMuteEnabled=*/true);
+        QVERIFY(m.effective());
+        QVERIFY(!m.userMute());    // ユーザーミュートではない
+        // 復帰 → 解除
+        m.onRestore();
+        QVERIFY(!m.effective());
+    }
+
+    // MuteState: 手動ミュート中の最小化→復帰でユーザーミュートが保持されること
+    void testMuteState_manualMuteSurvivesRestore() {
+        MuteState m;
+        m.toggleUser();            // ユーザーが手動ミュート
+        QVERIFY(m.userMute());
+
+        m.onMinimize(/*minimizeMuteEnabled=*/true);
+        QVERIFY(m.effective());    // まだミュート（変わらず）
+
+        m.onRestore();             // 復帰: autoMute だけ解除、userMute 保持
+        QVERIFY(m.userMute());     // ユーザーミュートは残る
+        QVERIFY(m.effective());    // effective もまだ true
+    }
+
+    // MuteState: minimize_mute=false では最小化しても自動ミュートしない
+    void testMuteState_minimizeMuteDisabled() {
+        MuteState m;
+        m.onMinimize(/*minimizeMuteEnabled=*/false);
+        QVERIFY(!m.effective());   // ミュートされない
     }
 };
 

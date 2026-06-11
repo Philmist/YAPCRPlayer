@@ -21,6 +21,7 @@
 #include <QDebug>
 #include <QDesktopServices>
 #include <QDir>
+#include <QEvent>
 #include <QFileInfo>
 #include <QKeyEvent>
 #include <QMenu>
@@ -33,6 +34,7 @@
 #include <QUrl>
 #include <QSplitter>
 #include <QVBoxLayout>
+#include <QWindowStateChangeEvent>
 #include <QtGlobal>
 #ifdef Q_OS_WIN
 #include <windows.h>
@@ -194,6 +196,13 @@ MainWindow::MainWindow(const config::Config& cfg,
                 session_->bbsPost(msg);
             });
 
+    // M5.3: 音量 / ミュート の起動時復元 ——————————————————————————————————————————
+    // [restore] トグルが true のものだけ [state] 値を適用。false ならアプリ既定（100/false）。
+    currentVolume_ = config_.restore.volume
+                         ? clampVolume(config_.state.volume)
+                         : 100;
+    muteState_.setUser(config_.restore.mute ? config_.state.mute : false);
+
     // M5.1/M5.2: アクションレジストリ設定 ——————————————————————————————————————————
     // TOML [shortcuts] の差分をデフォルト表に上書きしてキーマップを構築する。
     registry_.setKeyMap(mergeShortcuts(config_.shortcuts));
@@ -233,6 +242,42 @@ MainWindow::MainWindow(const config::Config& cfg,
     registry_.on(ActionId::OpenConfigFolder, [this]{
         const QString dir = QFileInfo(configPath_).absolutePath();
         QDesktopServices::openUrl(QUrl::fromLocalFile(dir));
+    });
+
+    // M5.3: 音量 / ミュート / 最小化 ——————————————————————————————————————————————
+    // 音量6種: 通常(±step)・小(±low)・大(±high) の上下
+    {
+        const int step  = config_.playback.volume_step;
+        const int low   = config_.playback.volume_step_low;
+        const int high  = config_.playback.volume_step_high;
+        registry_.on(ActionId::VolumeUp,       [this, step]{ changeVolume(+step); });
+        registry_.on(ActionId::VolumeDown,     [this, step]{ changeVolume(-step); });
+        registry_.on(ActionId::VolumeUpLow,    [this, low] { changeVolume(+low);  });
+        registry_.on(ActionId::VolumeDownLow,  [this, low] { changeVolume(-low);  });
+        registry_.on(ActionId::VolumeUpHigh,   [this, high]{ changeVolume(+high); });
+        registry_.on(ActionId::VolumeDownHigh, [this, high]{ changeVolume(-high); });
+    }
+    // Mute: userMute をトグルして mpv に反映
+    registry_.on(ActionId::Mute, [this]{
+        muteState_.toggleUser();
+        applyMute();
+        statusBar()->showMessage(
+            muteState_.userMute() ? tr("ミュート") : tr("ミュート解除"), 2000);
+    });
+    // Minimize: 最小化のみ（自動ミュートは changeEvent で一元処理）
+    registry_.on(ActionId::Minimize, [this]{
+        showMinimized();
+    });
+    // MinimizeMute: minimize_mute 設定をランタイムでトグル
+    registry_.on(ActionId::MinimizeMute, [this]{
+        config_.playback.minimize_mute = !config_.playback.minimize_mute;
+        if (actMinimizeMute_) {
+            actMinimizeMute_->setChecked(config_.playback.minimize_mute);
+        }
+        statusBar()->showMessage(
+            config_.playback.minimize_mute
+                ? tr("最小化時ミュート: ON") : tr("最小化時ミュート: OFF"),
+            2000);
     });
 
     // アスペクトプリセットハンドラ（メニュー構築前に登録。ポインタは [this] 経由で実行時参照）
@@ -288,6 +333,24 @@ MainWindow::MainWindow(const config::Config& cfg,
         actToggleResList_ = menu->addAction(tr("レス一覧 (&L) 表示切替"));
         connect(actToggleResList_, &QAction::triggered, this,
                 [this]{ registry_.trigger(ActionId::ToggleResList); });
+
+        // M5.3: ミュート / 最小化 / 最小化時ミュート
+        menu->addSeparator();
+        actMute_ = menu->addAction(tr("ミュート (&M)\tM"));
+        actMute_->setCheckable(true);
+        actMute_->setChecked(muteState_.userMute());
+        connect(actMute_, &QAction::triggered, this,
+                [this]{ registry_.trigger(ActionId::Mute); });
+
+        QAction* actMinimize = menu->addAction(tr("最小化"));
+        connect(actMinimize, &QAction::triggered, this,
+                [this]{ registry_.trigger(ActionId::Minimize); });
+
+        actMinimizeMute_ = menu->addAction(tr("最小化時にミュート"));
+        actMinimizeMute_->setCheckable(true);
+        actMinimizeMute_->setChecked(config_.playback.minimize_mute);
+        connect(actMinimizeMute_, &QAction::triggered, this,
+                [this]{ registry_.trigger(ActionId::MinimizeMute); });
     }
 
     // M4.1: 「表示」メニュー（フィットモード・アスペクト比）
@@ -486,7 +549,13 @@ void MainWindow::attachMpv() {
     if (!mpv_->attach(wid)) {
         qWarning() << "[mpv] attach 失敗";
         statusBar()->showMessage(tr("mpv の初期化に失敗しました"));
+        return;
     }
+
+    // M5.3: attach 成功後に復元した音量/ミュートを mpv に初期適用する。
+    // attach 前に setProperty を呼んでも mpv が未 init のため no-op になるのでここで行う。
+    mpv_->setPropertyDouble(QStringLiteral("volume"), static_cast<double>(currentVolume_));
+    applyMute();
 }
 
 void MainWindow::onTitleChanged(const QString& title) {
@@ -681,6 +750,44 @@ void MainWindow::openSnapshotFolder()
     const QString dir = snapshotDirectory();
     QDir().mkpath(dir);
     QDesktopServices::openUrl(QUrl::fromLocalFile(dir));
+}
+
+// M5.3: 音量を delta ステップ変化させて mpv に適用する。
+// 0-100 にクランプしてステータスバーに通知する。
+void MainWindow::changeVolume(int delta)
+{
+    currentVolume_ = applyVolumeStep(currentVolume_, delta);
+    mpv_->setPropertyDouble(QStringLiteral("volume"), static_cast<double>(currentVolume_));
+    statusBar()->showMessage(tr("音量: %1%").arg(currentVolume_), 2000);
+}
+
+// M5.3: muteState_.effective() を mpv の mute プロパティに反映し、メニューを同期する。
+void MainWindow::applyMute()
+{
+    mpv_->setPropertyFlag(QStringLiteral("mute"), muteState_.effective());
+    if (actMute_) { actMute_->setChecked(muteState_.userMute()); }
+}
+
+// M5.3: ウィンドウ状態変化（最小化/復帰）を検出して連動ミュートを制御する。
+// minimize_mute 機能は changeEvent で一元処理するため、最小化の経路（タスクバー/
+// Minimize アクション/Alt+F9 等）に依らず一貫した動作になる。
+void MainWindow::changeEvent(QEvent* event)
+{
+    if (event->type() == QEvent::WindowStateChange) {
+        auto* ev = static_cast<QWindowStateChangeEvent*>(event);
+        const bool wasMin = (ev->oldState() & Qt::WindowMinimized) != 0;
+        const bool nowMin = (windowState()  & Qt::WindowMinimized) != 0;
+        if (!wasMin && nowMin) {
+            // 最小化: minimize_mute が ON かつ手動ミュートなし → 自動ミュート
+            muteState_.onMinimize(config_.playback.minimize_mute);
+            applyMute();
+        } else if (wasMin && !nowMin) {
+            // 復帰: 自動ミュートのみ解除（ユーザーミュートは保持）
+            muteState_.onRestore();
+            applyMute();
+        }
+    }
+    QMainWindow::changeEvent(event);
 }
 
 // 映像子ウィンドウ（mpv --wid）のクリックを検出して MainWindow にフォーカスを戻す。
