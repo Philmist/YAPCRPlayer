@@ -28,11 +28,19 @@ qt_standard_project_setup()        # AUTOMOC/AUTOUIC/AUTORCC を有効化
 
 find_package(Mpv REQUIRED)
 
+# toml++ — TOML 永続化ライブラリ（M5.0。submodule: third_party/tomlplusplus）
+# tests/example は不要なのでフラグで無効化する
+set(TOMLPLUSPLUS_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
+set(TOMLPLUSPLUS_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+add_subdirectory(third_party/tomlplusplus)
+
 # --- テスト ---
 enable_testing()
 
-# --- モジュール（依存は一方向 DAG: common <- net <- peercast, common <- bbs, common <- player, app <- 全部） ---
+# --- モジュール（依存は一方向 DAG: common <- net <- peercast, common <- bbs, common <- player,
+#                              common <- config, app <- 全部） ---
 add_subdirectory(src/common)
+add_subdirectory(src/config)   # M5.0: TOML 設定基盤（tomlplusplus に依存）
 add_subdirectory(src/net)
 add_subdirectory(src/peercast)
 add_subdirectory(src/bbs)

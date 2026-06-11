@@ -9,7 +9,10 @@ build-*/
 cmake-build-*/
 
 # ---- ダウンロードした外部依存（scripts/fetch-mpv-dev.ps1 が取得） ----
-/third_party/
+# third_party/ 配下の vendoring 成果物のみ無視。
+# git submodule（tomlplusplus 等）は追跡するため ディレクトリ全体は無視しない。
+/third_party/mpv-dev/
+/third_party/mpv-dev-*.7z
 [Dd]ebug/
 [Rr]elease/
 [Xx]64/
