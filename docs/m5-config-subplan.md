@@ -239,6 +239,7 @@ sage     = false           # mail 欄の代替（sage トグル・PCRPlayer dial
 - `docs/architecture-decisions.md`: BBS の name/mail を **name=名無し既定・mail→sage トグル**に確定。
   **OpenFromClipboard の M6 拡張**（pls URL → viewxml の `name`/`url` 自動取得 → BBS 自動接続。PCRPlayer からの
   意図的乖離）を追記。config スキーマの確定を反映。
+  → **M6.0 で実施済み**（2026-06-11）: `architecture-decisions.md` 更新完了。
 - `docs/implementation-plan.md`: M5 のサブ分割（本書）への参照を追加。
 
 ---

@@ -153,10 +153,14 @@ PCRPlayer の資産は「コードそのまま流用」ではなく、**BBS/Peer
     `OpenFile` は `bbs.execute` を `if(commandline)` でガードし、手動オープンでは BBS を繋がない）。
     クリップボード判定は pls/http/ローカルパスの3種。`OpenContactInBrowser` は `QDesktopServices` で軽量に。
     専ブラ起動(`IDM_BBS_BROWSER`)は DROP。
-  - **【M6 拡張・意図的乖離】pls URL オープン時の BBS 自動接続**: pls URL を開いた際に PeerCast viewxml の
+  - **【M6 実装済・意図的乖離】pls URL オープン時の BBS 自動接続**: pls URL を開いた際に PeerCast viewxml の
     `name`/`url`(コンタクト) を自動取得し、チャンネル名と掲示板を自動設定して BBS 自動接続する。`ChannelInfo` は
     既に `name`/`url`/`comment` をパース済みなので技術的に可能。**PCRPlayer は CLI 3引数起動時のみ自動接続**して
-    いたため、これは明確な UX 改善であり PCRPlayer 踏襲の枠を超える拡張。実装は M6。
+    いたため、これは明確な UX 改善であり PCRPlayer 踏襲の枠を超える拡張。
+    **M6.0 実装**: `SessionController` に `autoConnectBbsOnInfo_` フラグを追加。
+    `start()` で `commandline_ == false && peca.valid` の場合にフラグをセットし、
+    `onChannelInfo()` が viewxml から `info.url`（contact URL）を受け取った初回に
+    `contact_` を設定して `bbsRefresh()` を呼ぶ（フラグは消費済みにリセット）。
 - **PeerCast 制御（プレイヤー側から実行・確定）**: 起動 URL `http://<host>:<port>/pls/<32桁ID>?tip=...` の
   **先頭 `host:port` がローカル PeerCast エンドポイント**。legacy admin HTTP で叩く（PeerCastStation も互換維持）。
   PCRPlayer `PeerCast.cpp` を参照仕様に移植:
