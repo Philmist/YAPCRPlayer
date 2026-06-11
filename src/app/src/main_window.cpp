@@ -698,11 +698,7 @@ void MainWindow::applyZoom(int percent)
 {
     const QSize t = videoTargetForZoom(lastVideoW_, lastVideoH_, percent);
     if (t.isEmpty()) { return; }   // native 未取得 → no-op（M4.0 の既存ガードを活用）
-    videoWidget_->setFixedSize(t);
-    // setFixedSize 直後は QMainWindowLayout のサイズヒントがキャッシュを返すため、
-    // 縮小方向への adjustSize() が効かない。activate() で強制再計算してから縮める。
-    centralWidget()->layout()->activate();
-    adjustSize();
+    fixVideoWidgetSize(t);
 }
 
 // M4.2: 映像領域をちょうど w×h ピクセルに固定する（バー除外の正確ピクセル = OBS タイル配信用）。
@@ -711,7 +707,31 @@ void MainWindow::applyAbsoluteSize(int w, int h)
 {
     if (w <= 0 || h <= 0) { return; }
     lastAbsW_ = w; lastAbsH_ = h;    // M4.3: 全画面復帰時の再適用用に保持
-    videoWidget_->setFixedSize(w, h);
+    fixVideoWidgetSize(QSize(w, h));
+}
+
+// videoWidget_ を target に固定し、ウィンドウを拡大・縮小の両方向に追従させる。
+// videoWidget_ は videoResListSplitter_（縦 QSplitter）の子なので、setFixedSize だけでは
+// QSplitter が内部のサイズ配分を更新せず、縮小時にスプリッター→ウィンドウの sizeHint が
+// 縮まない（拡大は効くが縮小が効かない、という非対称な不具合になる）。
+// スプリッターへ明示的に映像ペインの高さを push してキャッシュを無効化してから縮める。
+void MainWindow::fixVideoWidgetSize(const QSize& target)
+{
+    videoWidget_->setFixedSize(target);
+
+    // QSplitter に映像ペインの新しい高さを反映（レス一覧ペインの高さは保持）。
+    // 縦スプリッターなので幅は activate()+adjustSize() 側で追従する。
+    if (videoResListSplitter_) {
+        QList<int> sizes = videoResListSplitter_->sizes();
+        if (!sizes.isEmpty()) {
+            sizes[0] = target.height();
+            videoResListSplitter_->setSizes(sizes);
+        }
+        videoResListSplitter_->updateGeometry();
+    }
+
+    // setFixedSize 直後は QMainWindowLayout のサイズヒントがキャッシュを返すため、
+    // 縮小方向への adjustSize() が効かない。activate() で強制再計算してから縮める。
     centralWidget()->layout()->activate();
     adjustSize();
 }

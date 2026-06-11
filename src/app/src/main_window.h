@@ -78,6 +78,7 @@ private:
     // M4.2: 映像ウィジェットのサイズ固定・解除。
     void applyZoom(int percent);               // ズーム%をネイティブサイズに掛けて固定
     void applyAbsoluteSize(int w, int h);      // 映像領域をちょうど w×h に固定（バー除外正確ピクセル）
+    void fixVideoWidgetSize(const QSize& target); // videoWidget_ を target に固定しウィンドウを縮小方向にも追従させる
     void releaseSizeFixed();                   // setFixedSize を解除して自由リサイズに戻す
 
     // M4.3: 全画面トグル・遷移。
