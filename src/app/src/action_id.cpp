@@ -90,8 +90,8 @@ const QVector<ActionDef>& actionTable()
         { ActionId::SnapshotFolder,    "snapshot_folder",   {QStringLiteral("O")}},
         // ---- ファイル/URL ----
         { ActionId::OpenFileDialog,         "open_file_dialog",          {}},
-        { ActionId::OpenFromClipboard,      "open_from_clipboard",       {}},
-        { ActionId::CopyPathToClipboard,    "copy_path_to_clipboard",    {}},
+        { ActionId::OpenFromClipboard,      "open_from_clipboard",       {QStringLiteral("Ctrl+V")}},
+        { ActionId::CopyPathToClipboard,    "copy_path_to_clipboard",    {QStringLiteral("Ctrl+C")}},
         { ActionId::CopyContactToClipboard, "copy_contact_to_clipboard", {}},
         { ActionId::OpenContactInBrowser,   "open_contact_in_browser",   {}},
         // ---- 最小化 ----

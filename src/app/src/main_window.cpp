@@ -13,16 +13,20 @@
 #include "snapshot_filename.h" // M4.4: snapshotFilename
 #include "action_id.h"         // M5.1: ActionId / defaultKeyMap
 #include "shortcut_keys.h"     // M5.1: keyChordFromEvent
+#include "media_source.h"      // M5.4: クリップボード/パスの再生ソース種別判定
 
 #include <QAction>
 #include <QActionGroup>
+#include <QClipboard>
 #include <QCursor>
 #include <QDateTime>
 #include <QDebug>
 #include <QDesktopServices>
 #include <QDir>
 #include <QEvent>
+#include <QFileDialog>
 #include <QFileInfo>
+#include <QGuiApplication>
 #include <QKeyEvent>
 #include <QMenu>
 #include <QMenuBar>
@@ -280,6 +284,49 @@ MainWindow::MainWindow(const config::Config& cfg,
             2000);
     });
 
+    // M5.4: ファイル/URL を開く ＋ クリップボード連携 ——————————————————————————————————
+    registry_.on(ActionId::OpenFileDialog, [this]{
+        const QString file = QFileDialog::getOpenFileName(
+            this, tr("ファイルを開く"), QString(),
+            tr("メディアファイル (*.mp4 *.mkv *.avi *.ts *.webm *.mov *.wmv *.flv "
+               "*.mp3 *.aac *.flac *.wav);;すべてのファイル (*.*)"));
+        if (!file.isEmpty()) { openMedia(file, {}, {}, /*commandline=*/false); }
+    });
+    registry_.on(ActionId::OpenFromClipboard, [this]{
+        const QString text = QGuiApplication::clipboard()->text().trimmed();
+        if (classifyMediaSource(text) == MediaSourceKind::Invalid) {
+            statusBar()->showMessage(tr("クリップボードに有効なURL/パスがありません"), 3000);
+            return;
+        }
+        openMedia(text, {}, {}, /*commandline=*/false); // BBS 自動接続しない（commandline=false）
+    });
+    registry_.on(ActionId::CopyPathToClipboard, [this]{
+        const QString p = session_->currentPath();
+        if (p.isEmpty()) {
+            statusBar()->showMessage(tr("コピーする再生URL/パスがありません"), 3000);
+            return;
+        }
+        QGuiApplication::clipboard()->setText(p);
+        statusBar()->showMessage(tr("再生URL/パスをコピーしました"), 2000);
+    });
+    registry_.on(ActionId::CopyContactToClipboard, [this]{
+        const QString c = session_->currentContact();
+        if (c.isEmpty()) {
+            statusBar()->showMessage(tr("コピーする掲示板URLがありません"), 3000);
+            return;
+        }
+        QGuiApplication::clipboard()->setText(c);
+        statusBar()->showMessage(tr("掲示板URLをコピーしました"), 2000);
+    });
+    registry_.on(ActionId::OpenContactInBrowser, [this]{
+        const QString c = session_->currentContact();
+        if (c.isEmpty()) {
+            statusBar()->showMessage(tr("開く掲示板URLがありません"), 3000);
+            return;
+        }
+        QDesktopServices::openUrl(QUrl(c));
+    });
+
     // アスペクトプリセットハンドラ（メニュー構築前に登録。ポインタは [this] 経由で実行時参照）
     registry_.on(ActionId::AspectDefault, [this]{
         currentFit_ = FitMode::Inscribe; currentAspectX_ = 0; currentAspectY_ = 0;
@@ -306,6 +353,33 @@ MainWindow::MainWindow(const config::Config& cfg,
                 }
             });
         }
+    }
+
+    // M5.4: 「ファイル」メニュー（最左。ファイル/URL を開く・コピー・ブラウザ） ————————
+    {
+        QMenu* fileMenu = menuBar()->addMenu(tr("ファイル(&F)"));
+
+        QAction* actOpen = fileMenu->addAction(tr("開く...(&O)"));
+        connect(actOpen, &QAction::triggered, this,
+                [this]{ registry_.trigger(ActionId::OpenFileDialog); });
+
+        QAction* actOpenClip = fileMenu->addAction(tr("クリップボードから開く(&P)\tCtrl+V"));
+        connect(actOpenClip, &QAction::triggered, this,
+                [this]{ registry_.trigger(ActionId::OpenFromClipboard); });
+
+        fileMenu->addSeparator();
+
+        QAction* actCopyPath = fileMenu->addAction(tr("再生URL/パスをコピー(&C)\tCtrl+C"));
+        connect(actCopyPath, &QAction::triggered, this,
+                [this]{ registry_.trigger(ActionId::CopyPathToClipboard); });
+
+        QAction* actCopyContact = fileMenu->addAction(tr("掲示板URLをコピー(&D)"));
+        connect(actCopyContact, &QAction::triggered, this,
+                [this]{ registry_.trigger(ActionId::CopyContactToClipboard); });
+
+        QAction* actOpenBrowser = fileMenu->addAction(tr("掲示板をブラウザで開く(&B)"));
+        connect(actOpenBrowser, &QAction::triggered, this,
+                [this]{ registry_.trigger(ActionId::OpenContactInBrowser); });
     }
 
     // M2: 最小メニューバー（再接続/切断/再読込） ——————————————————————————————————

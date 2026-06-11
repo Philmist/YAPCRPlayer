@@ -5,6 +5,7 @@
 #include "shortcut_keys.h"
 #include "action_registry.h"
 #include "volume_state.h"   // M5.3: 純ロジック（ヘッダオンリー）
+#include "media_source.h"   // M5.4: 純ロジック（ヘッダオンリー）
 
 using namespace yapcr::app;
 
@@ -363,6 +364,56 @@ private slots:
         MuteState m;
         m.onMinimize(/*minimizeMuteEnabled=*/false);
         QVERIFY(!m.effective());   // ミュートされない
+    }
+
+    // ------------------------------------------------------------------
+    // 9. M5.4: classifyMediaSource 再生ソース種別判定
+    // ------------------------------------------------------------------
+
+    // PeerCast /pls/ URL
+    void testClassifyMediaSource_pls() {
+        // 正規の 32 文字 hex ID
+        const QString pls = QStringLiteral("http://localhost:7144/pls/ABCDEF0123456789ABCDEF0123456789");
+        QCOMPARE(classifyMediaSource(pls), MediaSourceKind::PlsUrl);
+        // 大文字小文字を混在させても pls 判定
+        QCOMPARE(classifyMediaSource(QStringLiteral("HTTP://HOST:7144/pls/abcdef0123456789ABCDEF0123456789")),
+                 MediaSourceKind::PlsUrl);
+    }
+
+    // 一般 http(s) URL（pls でないもの）
+    void testClassifyMediaSource_http() {
+        QCOMPARE(classifyMediaSource(QStringLiteral("http://example.com/stream")),
+                 MediaSourceKind::HttpUrl);
+        QCOMPARE(classifyMediaSource(QStringLiteral("https://example.com/video.mp4")),
+                 MediaSourceKind::HttpUrl);
+        // /pls/ の ID が 32 文字未満なら HttpUrl にフォールバック
+        QCOMPARE(classifyMediaSource(QStringLiteral("http://host:7144/pls/TOOSHORT")),
+                 MediaSourceKind::HttpUrl);
+    }
+
+    // ローカルファイルパス
+    void testClassifyMediaSource_localPath() {
+        QCOMPARE(classifyMediaSource(QStringLiteral("C:\\video.mp4")),   MediaSourceKind::LocalPath);
+        QCOMPARE(classifyMediaSource(QStringLiteral("C:/video.mp4")),    MediaSourceKind::LocalPath);
+        QCOMPARE(classifyMediaSource(QStringLiteral("D:\\dir\\sub.mkv")), MediaSourceKind::LocalPath);
+        QCOMPARE(classifyMediaSource(QStringLiteral("\\\\server\\share\\file.ts")), MediaSourceKind::LocalPath);
+        QCOMPARE(classifyMediaSource(QStringLiteral("file:///C:/movie.mp4")), MediaSourceKind::LocalPath);
+    }
+
+    // 認識できない文字列は Invalid
+    void testClassifyMediaSource_invalid() {
+        QCOMPARE(classifyMediaSource(QStringLiteral("")),          MediaSourceKind::Invalid);
+        QCOMPARE(classifyMediaSource(QStringLiteral("   ")),       MediaSourceKind::Invalid);
+        QCOMPARE(classifyMediaSource(QStringLiteral("foobar")),    MediaSourceKind::Invalid);
+        QCOMPARE(classifyMediaSource(QStringLiteral("movie.mp4")), MediaSourceKind::Invalid); // 相対パス
+        QCOMPARE(classifyMediaSource(QStringLiteral("ftp://example.com/file.mp4")), MediaSourceKind::Invalid);
+    }
+
+    // 前後空白を trim して正しく判定する
+    void testClassifyMediaSource_trim() {
+        const QString pls = QStringLiteral("  http://localhost:7144/pls/ABCDEF0123456789ABCDEF0123456789  ");
+        QCOMPARE(classifyMediaSource(pls), MediaSourceKind::PlsUrl);
+        QCOMPARE(classifyMediaSource(QStringLiteral("\tC:\\video.mp4\n")), MediaSourceKind::LocalPath);
     }
 };
 
