@@ -1,7 +1,9 @@
 #include "res_input_bar.h"
 
+#include <QEvent>
 #include <QFontMetrics>
 #include <QHBoxLayout>
+#include <QKeyEvent>
 #include <QKeySequence>
 #include <QPlainTextEdit>
 #include <QPushButton>
@@ -36,6 +38,12 @@ ResInputBar::ResInputBar(QWidget* parent) : QWidget(parent)
 
     connect(sendBtn_, &QPushButton::clicked, this, &ResInputBar::onSendClicked);
 
+    // M5.1: Tab キーで入力欄 → プレイヤーにフォーカスを戻せるようにフィルタを設置する。
+    // edit_ は ClickFocus なのでタブ順には乗らないが、クリックで得たフォーカス中に
+    // Tab を押すと QPlainTextEdit がタブ文字として消費してしまう。
+    // eventFilter で Tab を奪いプレイヤーへフォーカスを返す。
+    edit_->installEventFilter(this);
+
     // Ctrl+Enter でも送信（Enter 単体は改行として使いたいため Ctrl 修飾）
     auto* shortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Return), edit_);
     connect(shortcut, &QShortcut::activated, this, &ResInputBar::onSendClicked);
@@ -50,6 +58,31 @@ void ResInputBar::setInputEnabled(bool enabled)
 {
     edit_->setEnabled(enabled);
     sendBtn_->setEnabled(enabled);
+}
+
+bool ResInputBar::inputHasFocus() const
+{
+    return edit_->hasFocus();
+}
+
+void ResInputBar::setInputFocus()
+{
+    edit_->setFocus(Qt::TabFocusReason);
+}
+
+bool ResInputBar::eventFilter(QObject* obj, QEvent* event)
+{
+    // edit_ への Tab キーをインターセプトしてプレイヤー（最上位ウィンドウ）にフォーカスを戻す
+    if (obj == edit_ && event->type() == QEvent::KeyPress) {
+        const auto* ke = static_cast<QKeyEvent*>(event);
+        if (ke->key() == Qt::Key_Tab) {
+            if (QWidget* top = window()) {
+                top->setFocus(Qt::TabFocusReason);
+            }
+            return true;  // Tab を edit_ に渡さない（タブ文字挿入を防ぐ）
+        }
+    }
+    return QWidget::eventFilter(obj, event);
 }
 
 void ResInputBar::onSendClicked()

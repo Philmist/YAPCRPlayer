@@ -4,6 +4,7 @@
 #include <clocale>
 
 #include "main_window.h"
+#include "config/config.h"  // M5.0: 起動時設定ロード
 
 int main(int argc, char** argv) {
     QApplication app(argc, argv);
@@ -13,7 +14,13 @@ int main(int argc, char** argv) {
     // ref: mpv/client.h — "The LC_NUMERIC locale category must be set to 'C'."
     std::setlocale(LC_NUMERIC, "C");
 
-    yapcr::app::MainWindow window;
+    // M5.0/M5.2: 設定ファイルをロードして MainWindow へ DI。
+    // configPath は ReloadConfig/OpenConfigFolder でも使うため別変数に保持する。
+    // パース失敗時は qWarning が出て全項目デフォルトで起動（落とさない）。
+    const QString configPath = yapcr::config::defaultConfigPath();
+    const yapcr::config::Config cfg = yapcr::config::load(configPath);
+
+    yapcr::app::MainWindow window(cfg, configPath);
     window.resize(960, 540);
     window.show();
 

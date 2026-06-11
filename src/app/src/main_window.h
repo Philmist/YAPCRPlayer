@@ -2,7 +2,9 @@
 
 #include <QMainWindow>
 
-#include "display_modes.h"  // M4.1: FitMode
+#include "display_modes.h"   // M4.1: FitMode
+#include "config/config.h"   // M5.0: 設定構造体
+#include "action_registry.h" // M5.1: 中央アクションディスパッチャ
 
 class QAction;
 class QActionGroup;
@@ -37,7 +39,11 @@ class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
-    explicit MainWindow(QWidget* parent = nullptr);
+    // M5.0: 起動時にロードした Config を受け取る。
+    // M5.2: configPath を追加し ReloadConfig / OpenConfigFolder で利用。
+    explicit MainWindow(const config::Config& cfg,
+                        const QString& configPath,
+                        QWidget* parent = nullptr);
     ~MainWindow() override;
 
     // 再生を開始する。show() の前後どちらから呼んでもよい。
@@ -82,6 +88,9 @@ private:
     void    openSnapshotFolder();          // 保存フォルダをエクスプローラで開く
     QString snapshotDirectory() const;    // 保存先（Pictures/YAPCRPlayer）。// M5: config化
 
+    config::Config           config_;      // M5.0: 起動時ロード済み設定
+    QString                  configPath_;  // M5.2: ReloadConfig/OpenConfigFolder 用パス
+    ActionRegistry           registry_;   // M5.1: 中央アクションディスパッチャ
     VideoHostWidget*         videoWidget_{nullptr};
     player::MpvBackend*      mpv_{nullptr};
     SessionController*       session_{nullptr};
@@ -127,6 +136,16 @@ private:
     // M4.4: スナップショット
     QAction* actSnapshot_{nullptr};        // 「スナップショット保存」アクション
     QAction* actSnapshotFolder_{nullptr};  // 「保存フォルダを開く」アクション
+
+    // M5.1: プリセット QAction ポインタ（keyboard dispatch 後の check state 同期用）
+    // sizeModeGroup_: actZoomPresets_ / actSizePresets_ / actFreeSize_
+    // displayModeGroup_: actInscribeFit_ / actAspectNone_ / actAspectPresetActions_
+    QAction*          actFreeSize_{nullptr};         // 「サイズ固定解除」
+    QVector<QAction*> actZoomPresets_;               // Ctrl+1..0 ズーム
+    QVector<QAction*> actSizePresets_;               // Shift+1..0 絶対サイズ
+    QAction*          actInscribeFit_{nullptr};      // フィット「内接」
+    QAction*          actAspectNone_{nullptr};       // アスペクト「なし（内接）」
+    QVector<QAction*> actAspectPresetActions_;       // Alt+3..7 アスペクトプリセット
 
     // openMedia が attach より先に呼ばれた場合に備えて引数を保持する
     struct PendingMedia {

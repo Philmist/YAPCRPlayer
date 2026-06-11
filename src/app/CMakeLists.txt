@@ -20,6 +20,12 @@ qt_add_executable(YAPCRPlayer WIN32
     src/display_modes.h
     src/snapshot_filename.cpp  # M4.4: スナップショットファイル名生成（純関数）
     src/snapshot_filename.h
+    src/action_id.cpp          # M5.1: アクション識別子・中央テーブル
+    src/action_id.h
+    src/shortcut_keys.cpp      # M5.1: キー文字列正規化・変換（Num規約・逆引き構築）
+    src/shortcut_keys.h
+    src/action_registry.cpp    # M5.1: 中央アクションディスパッチャ
+    src/action_registry.h
 )
 
 target_link_libraries(YAPCRPlayer PRIVATE
@@ -29,6 +35,7 @@ target_link_libraries(YAPCRPlayer PRIVATE
     yapcr::net
     yapcr::common
     yapcr::bbs              # M3.6: BbsSession + モデル（net/common/Core は推移的依存）
+    yapcr::config           # M5.0: TOML 設定基盤
 )
 
 # build ツリーから直接起動できるよう libmpv-2.dll を exe の隣へ置く。

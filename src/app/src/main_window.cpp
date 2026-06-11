@@ -11,6 +11,8 @@
 #include "common/version.h"
 #include "window_geometry.h"   // M4.2: videoTargetForZoom / zoomPresets / sizePresets
 #include "snapshot_filename.h" // M4.4: snapshotFilename
+#include "action_id.h"         // M5.1: ActionId / defaultKeyMap
+#include "shortcut_keys.h"     // M5.1: keyChordFromEvent
 
 #include <QAction>
 #include <QActionGroup>
@@ -19,6 +21,7 @@
 #include <QDebug>
 #include <QDesktopServices>
 #include <QDir>
+#include <QFileInfo>
 #include <QKeyEvent>
 #include <QMenu>
 #include <QMenuBar>
@@ -37,7 +40,13 @@
 
 namespace yapcr::app {
 
-MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
+MainWindow::MainWindow(const config::Config& cfg,
+                       const QString& configPath,
+                       QWidget* parent)
+    : QMainWindow(parent)
+    , config_(cfg)
+    , configPath_(configPath)
+{
     // M3.7: centralWidget を QWidget コンテナ化し、各ウィジェットを縦積みする。
     // 注意: videoWidget_->winId() は attachMpv()（showEvent 後）で mpv に渡す。
     //       コンテナ化は attach 前に確定させ、attach 後に reparent しないこと。
@@ -185,42 +194,100 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
                 session_->bbsPost(msg);
             });
 
-    // M2: 最小メニューバー（再接続/切断/再読込）
+    // M5.1/M5.2: アクションレジストリ設定 ——————————————————————————————————————————
+    // TOML [shortcuts] の差分をデフォルト表に上書きしてキーマップを構築する。
+    registry_.setKeyMap(mergeShortcuts(config_.shortcuts));
+
+    // 実装済みアクションのハンドラを登録（未実装アクションはキーマップに載るが
+    // ハンドラ未登録のまま → dispatch() が false を返しキーを素通しする）。
+    registry_.on(ActionId::Bump,    [this]{ session_->manualBump(); });
+    registry_.on(ActionId::Stop,    [this]{ session_->manualStop(); });
+    registry_.on(ActionId::Rebuild, [this]{ session_->manualReload(); });
+    registry_.on(ActionId::ThreadRefresh, [this]{
+        resListPane_->clearRes();
+        session_->bbsRefresh();
+    });
+    registry_.on(ActionId::ToggleBbs, [this]{
+        if (resInputBar_->isVisible()) {
+            resInputBar_->hide();
+            resListPane_->hide();
+            bbsUserClosed_ = true;
+        } else {
+            resInputBar_->show();
+            bbsUserClosed_ = false;
+        }
+    });
+    registry_.on(ActionId::ToggleResList, [this]{
+        resListPane_->setVisible(!resListPane_->isVisible());
+    });
+    registry_.on(ActionId::FullScreen,    [this]{ toggleFullScreen(); });
+    registry_.on(ActionId::SnapshotSave,  [this]{ takeSnapshot(); });
+    registry_.on(ActionId::SnapshotFolder,[this]{ openSnapshotFolder(); });
+
+    // M5.2: 設定再読み込み・フォルダを開く
+    registry_.on(ActionId::ReloadConfig, [this]{
+        config_ = config::load(configPath_);
+        registry_.setKeyMap(mergeShortcuts(config_.shortcuts));
+        statusBar()->showMessage(tr("設定を再読み込みしました"), 3000);
+    });
+    registry_.on(ActionId::OpenConfigFolder, [this]{
+        const QString dir = QFileInfo(configPath_).absolutePath();
+        QDesktopServices::openUrl(QUrl::fromLocalFile(dir));
+    });
+
+    // アスペクトプリセットハンドラ（メニュー構築前に登録。ポインタは [this] 経由で実行時参照）
+    registry_.on(ActionId::AspectDefault, [this]{
+        currentFit_ = FitMode::Inscribe; currentAspectX_ = 0; currentAspectY_ = 0;
+        applyFitMode();
+        if (actInscribeFit_) { actInscribeFit_->setChecked(true); }
+    });
+    registry_.on(ActionId::AspectNone, [this]{
+        currentFit_ = FitMode::Inscribe; currentAspectX_ = 0; currentAspectY_ = 0;
+        applyFitMode();
+        if (actAspectNone_) { actAspectNone_->setChecked(true); }
+    });
+    {
+        const auto presets = aspectPresets();
+        for (int i = 0; i < presets.size() && i < 5; ++i) {
+            const ActionId aid = ActionId(int(ActionId::AspectPreset1) + i);
+            const int ax = presets[i].x, ay = presets[i].y;
+            registry_.on(aid, [this, ax, ay, i]{
+                currentFit_     = FitMode::AspectOverride;
+                currentAspectX_ = ax;
+                currentAspectY_ = ay;
+                applyFitMode();
+                if (i < actAspectPresetActions_.size()) {
+                    actAspectPresetActions_[i]->setChecked(true);
+                }
+            });
+        }
+    }
+
+    // M2: 最小メニューバー（再接続/切断/再読込） ——————————————————————————————————
     {
         QMenu* menu = menuBar()->addMenu(tr("操作(&O)"));
 
-        actBump_   = menu->addAction(tr("再接続 (&B)ump"));
-        actStop_   = menu->addAction(tr("切断 (&S)top"));
+        actBump_   = menu->addAction(tr("再接続 (&B)ump\tAlt+B"));
+        actStop_   = menu->addAction(tr("切断 (&Z)top\tAlt+Z"));
         menu->addSeparator();
-        actReload_ = menu->addAction(tr("再読込 (&R)eload"));
+        actReload_ = menu->addAction(tr("再読込 (&R)eload\tCtrl+R"));
 
-        connect(actBump_,   &QAction::triggered, session_, &SessionController::manualBump);
-        connect(actStop_,   &QAction::triggered, session_, &SessionController::manualStop);
-        connect(actReload_, &QAction::triggered, session_, &SessionController::manualReload);
+        connect(actBump_,   &QAction::triggered, this, [this]{ registry_.trigger(ActionId::Bump); });
+        connect(actStop_,   &QAction::triggered, this, [this]{ registry_.trigger(ActionId::Stop); });
+        connect(actReload_, &QAction::triggered, this, [this]{ registry_.trigger(ActionId::Rebuild); });
 
-        // M3.6: BBS 取得/更新・ドック表示切替
+        // M3.6: BBS 取得/更新・パネル表示切替
         menu->addSeparator();
         actBbsRefresh_ = menu->addAction(tr("BBS 取得/更新 (&G)"));
-        connect(actBbsRefresh_, &QAction::triggered, this, [this] {
-            resListPane_->clearRes();
-            session_->bbsRefresh();
-        });
+        connect(actBbsRefresh_, &QAction::triggered, this,
+                [this]{ registry_.trigger(ActionId::ThreadRefresh); });
         menu->addSeparator();
-        actToggleBbs_ = menu->addAction(tr("BBS パネル (&B) 表示切替"));
-        connect(actToggleBbs_, &QAction::triggered, this, [this] {
-            if (resInputBar_->isVisible()) {
-                resInputBar_->hide();
-                resListPane_->hide();
-                bbsUserClosed_ = true;
-            } else {
-                resInputBar_->show();
-                bbsUserClosed_ = false;
-            }
-        });
+        actToggleBbs_ = menu->addAction(tr("BBS パネル (&C) 表示切替\tC"));
+        connect(actToggleBbs_, &QAction::triggered, this,
+                [this]{ registry_.trigger(ActionId::ToggleBbs); });
         actToggleResList_ = menu->addAction(tr("レス一覧 (&L) 表示切替"));
-        connect(actToggleResList_, &QAction::triggered, this, [this] {
-            resListPane_->setVisible(!resListPane_->isVisible());
-        });
+        connect(actToggleResList_, &QAction::triggered, this,
+                [this]{ registry_.trigger(ActionId::ToggleResList); });
     }
 
     // M4.1: 「表示」メニュー（フィットモード・アスペクト比）
@@ -228,7 +295,6 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
         QMenu* viewMenu = menuBar()->addMenu(tr("表示(&V)"));
 
         // フィットモードとアスペクト比は同一の排他グループとする。
-        // モード選択は実質一軸なので、1 つの QActionGroup を 2 サブメニューに配置する。
         displayModeGroup_ = new QActionGroup(this);
         displayModeGroup_->setExclusive(true);
 
@@ -239,6 +305,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
             QAction* act = fitMenu->addAction(label);
             act->setCheckable(true);
             displayModeGroup_->addAction(act);
+            // フィット切替は keyboard shortcut がないため直接 connect
             connect(act, &QAction::triggered, this, [this, mode, ax, ay] {
                 currentFit_     = mode;
                 currentAspectX_ = ax;
@@ -248,35 +315,33 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
             return act;
         };
 
-        QAction* actInscribe = addFit(tr("内接 (&I)nscribe（既定）"), FitMode::Inscribe);
-        actInscribe->setChecked(true);  // 初期選択
-        addFit(tr("引き伸ばし (&S)tretch"),    FitMode::Stretch);
-        addFit(tr("充填 (&F)ill"),             FitMode::Fill);
-        addFit(tr("等倍 (&U)nscaled"),         FitMode::Unscaled);
+        actInscribeFit_ = addFit(tr("内接 (&I)nscribe（既定）"), FitMode::Inscribe);
+        actInscribeFit_->setChecked(true);  // 初期選択
+        addFit(tr("引き伸ばし (&S)tretch"), FitMode::Stretch);
+        addFit(tr("充填 (&F)ill"),          FitMode::Fill);
+        addFit(tr("等倍 (&U)nscaled"),      FitMode::Unscaled);
 
         // ---- アスペクト比サブメニュー ----
         QMenu* aspectMenu = viewMenu->addMenu(tr("アスペクト比(&A)"));
 
-        auto addAspect = [&](const QString& label, FitMode mode, int ax, int ay) {
-            QAction* act = aspectMenu->addAction(label);
+        // 「なし（内接）」= 内接相当（Alt+2）
+        actAspectNone_ = aspectMenu->addAction(tr("なし（内接）\tAlt+2"));
+        actAspectNone_->setCheckable(true);
+        displayModeGroup_->addAction(actAspectNone_);
+        connect(actAspectNone_, &QAction::triggered, this,
+                [this]{ registry_.trigger(ActionId::AspectNone); });
+
+        // プリセット（ハードコード既定。M5.2: config 化）
+        const auto aspectList = aspectPresets();
+        for (int i = 0; i < aspectList.size() && i < 5; ++i) {
+            const ActionId aid = ActionId(int(ActionId::AspectPreset1) + i);
+            const QString keyHint = QStringLiteral("\tAlt+%1").arg(3 + i);
+            QAction* act = aspectMenu->addAction(
+                QString::fromLatin1(aspectList[i].label) + keyHint);
             act->setCheckable(true);
             displayModeGroup_->addAction(act);
-            connect(act, &QAction::triggered, this, [this, mode, ax, ay] {
-                currentFit_     = mode;
-                currentAspectX_ = ax;
-                currentAspectY_ = ay;
-                applyFitMode();
-            });
-            return act;
-        };
-
-        // 「なし」= 内接相当（フィットサブメニューの内接と同じ効果）
-        addAspect(tr("なし（内接）"), FitMode::Inscribe, 0, 0);
-
-        // プリセット（ハードコード既定。M5: config化）
-        for (const auto& preset : aspectPresets()) {
-            addAspect(QString::fromLatin1(preset.label),
-                      FitMode::AspectOverride, preset.x, preset.y);
+            actAspectPresetActions_ << act;
+            connect(act, &QAction::triggered, this, [this, aid]{ registry_.trigger(aid); });
         }
 
         viewMenu->addSeparator();
@@ -288,61 +353,95 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
 
         // 「自由リサイズ（固定解除）」— 初期選択
         {
-            QAction* actFree = viewMenu->addAction(tr("サイズ固定を解除（自由リサイズ）"));
-            actFree->setCheckable(true);
-            actFree->setChecked(true);
-            sizeModeGroup_->addAction(actFree);
-            connect(actFree, &QAction::triggered, this, [this] {
+            actFreeSize_ = viewMenu->addAction(tr("サイズ固定を解除（自由リサイズ）"));
+            actFreeSize_->setCheckable(true);
+            actFreeSize_->setChecked(true);
+            sizeModeGroup_->addAction(actFreeSize_);
+            connect(actFreeSize_, &QAction::triggered, this, [this]{
                 currentSizeMode_ = SizeMode::Free;
                 currentZoom_     = 0;
                 releaseSizeFixed();
             });
         }
 
-        // 「ズーム%」サブメニュー（ラジオ）: プリセットをループして生成
+        // 「ズーム%」サブメニュー（Ctrl+1..0 に対応）
         {
             QMenu* zoomMenu = viewMenu->addMenu(tr("ズーム(&Z)"));
-            for (int percent : zoomPresets()) {
-                QAction* act = zoomMenu->addAction(QStringLiteral("%1%").arg(percent));
+            const QList<int> zooms = zoomPresets();
+            for (int i = 0; i < zooms.size() && i < 10; ++i) {
+                const ActionId aid    = ActionId(int(ActionId::ZoomPreset1) + i);
+                const int      pct    = zooms[i];
+                const QString  keyHint = (i < 9)
+                    ? QStringLiteral("\tCtrl+%1").arg(i + 1)
+                    : QStringLiteral("\tCtrl+0");
+                QAction* act = zoomMenu->addAction(
+                    QStringLiteral("%1%").arg(pct) + keyHint);
                 act->setCheckable(true);
                 sizeModeGroup_->addAction(act);
-                connect(act, &QAction::triggered, this, [this, percent] {
+                actZoomPresets_ << act;
+
+                // ハンドラ（keyboard shortcut も menu click も同じ処理）
+                registry_.on(aid, [this, pct, act]{
                     currentSizeMode_ = SizeMode::Zoom;
-                    currentZoom_     = percent;
-                    applyZoom(percent);
+                    currentZoom_     = pct;
+                    applyZoom(pct);
+                    act->setChecked(true);  // QActionGroup が他を自動解除
                 });
+                connect(act, &QAction::triggered, this, [this, aid]{ registry_.trigger(aid); });
             }
         }
 
-        // 「絶対サイズ」サブメニュー（ラジオ）: プリセットをループして生成
+        // 「絶対サイズ」サブメニュー（Shift+1..0 に対応）
         {
             QMenu* sizeMenu = viewMenu->addMenu(tr("絶対サイズ(&S)"));
-            for (const auto& preset : sizePresets()) {
-                QAction* act = sizeMenu->addAction(QString::fromLatin1(preset.label));
+            const auto sizes = sizePresets();
+            for (int i = 0; i < sizes.size() && i < 10; ++i) {
+                const ActionId aid    = ActionId(int(ActionId::SizePreset1) + i);
+                const int      pw     = sizes[i].w;
+                const int      ph     = sizes[i].h;
+                const QString  keyHint = (i < 9)
+                    ? QStringLiteral("\tShift+%1").arg(i + 1)
+                    : QStringLiteral("\tShift+0");
+                QAction* act = sizeMenu->addAction(
+                    QString::fromLatin1(sizes[i].label) + keyHint);
                 act->setCheckable(true);
                 sizeModeGroup_->addAction(act);
-                const int pw = preset.w;
-                const int ph = preset.h;
-                connect(act, &QAction::triggered, this, [this, pw, ph] {
+                actSizePresets_ << act;
+
+                registry_.on(aid, [this, pw, ph, act]{
                     currentSizeMode_ = SizeMode::Absolute;
                     currentZoom_     = 0;
                     applyAbsoluteSize(pw, ph);
+                    act->setChecked(true);
                 });
+                connect(act, &QAction::triggered, this, [this, aid]{ registry_.trigger(aid); });
             }
         }
 
-        // M4.3: 全画面（M5: config化 — 全画面時のバー表示有無）
+        // M4.3: 全画面（F キー / メニュー / ダブルクリック）
         viewMenu->addSeparator();
         actFullScreen_ = viewMenu->addAction(tr("全画面(&F)ull Screen\tF"));
         actFullScreen_->setCheckable(true);
-        connect(actFullScreen_, &QAction::triggered, this, [this] { toggleFullScreen(); });
+        connect(actFullScreen_, &QAction::triggered, this,
+                [this]{ registry_.trigger(ActionId::FullScreen); });
 
-        // M4.4: スナップショット（M5: config化 — 保存先・形式・品質）
+        // M4.4: スナップショット（P キー / O キー）
         viewMenu->addSeparator();
-        actSnapshot_ = viewMenu->addAction(tr("スナップショット保存 (&S)napshot\tS"));
-        connect(actSnapshot_, &QAction::triggered, this, [this] { takeSnapshot(); });
-        actSnapshotFolder_ = viewMenu->addAction(tr("保存フォルダを開く"));
-        connect(actSnapshotFolder_, &QAction::triggered, this, [this] { openSnapshotFolder(); });
+        actSnapshot_ = viewMenu->addAction(tr("スナップショット保存 (&P)napshot\tP"));
+        connect(actSnapshot_, &QAction::triggered, this,
+                [this]{ registry_.trigger(ActionId::SnapshotSave); });
+        actSnapshotFolder_ = viewMenu->addAction(tr("保存フォルダを開く\tO"));
+        connect(actSnapshotFolder_, &QAction::triggered, this,
+                [this]{ registry_.trigger(ActionId::SnapshotFolder); });
+
+        // M5.2: 設定導線（設定フォルダを開く / 設定を再読み込み）
+        viewMenu->addSeparator();
+        QAction* actOpenConfigFolder = viewMenu->addAction(tr("設定フォルダを開く"));
+        connect(actOpenConfigFolder, &QAction::triggered, this,
+                [this]{ registry_.trigger(ActionId::OpenConfigFolder); });
+        QAction* actReloadConfig = viewMenu->addAction(tr("設定を再読み込み"));
+        connect(actReloadConfig, &QAction::triggered, this,
+                [this]{ registry_.trigger(ActionId::ReloadConfig); });
     }
 
     // ウィンドウタイトルの初期値
@@ -499,22 +598,46 @@ void MainWindow::reapplySizeMode()
     }
 }
 
-// F キー: 全画面トグル。Esc キー: 全画面中のみ解除。S キー: スナップショット保存。
-// resInputBar_ の入力欄にフォーカスがある間はそちらが消費するため、書き込み中は誤爆しない（望ましい）。
+// M5.1: 中央キーディスパッチャ ————————————————————————————————————————————————
+//
+// 横断決定4: 全キー入力をここで一元処理する。
+//   1. レス入力欄フォーカス中は素通し（BBS 書き込み中にプレイヤーキーを発火させない）
+//   2. Tab で入力欄 ⇄ プレイヤーのフォーカスを往復（PCRPlayer IDM_WINDOW_EDIT 踏襲）
+//   3. Esc は全画面中のみ解除（既存特例を維持）
+//   4. それ以外は KeyChord に正規化してレジストリへ dispatch
 void MainWindow::keyPressEvent(QKeyEvent* event)
 {
-    if (event->key() == Qt::Key_F) {
-        toggleFullScreen();
+    // 1. レス入力欄フォーカス中は QMainWindow に素通し（resInputBar_ が消費する）
+    if (resInputBar_->isVisible() && resInputBar_->inputHasFocus()) {
+        QMainWindow::keyPressEvent(event);
         return;
     }
+
+    // 2. Tab → レス入力欄（表示中かつ有効なら）にフォーカスを移す
+    if (event->key() == Qt::Key_Tab) {
+        if (resInputBar_->isVisible() && resInputBar_->isEnabled()) {
+            resInputBar_->setInputFocus();
+            event->accept();
+        } else {
+            QMainWindow::keyPressEvent(event);
+        }
+        return;
+    }
+
+    // 3. Esc: 全画面中のみ解除（レジストリに乗せず特例として維持）
     if (event->key() == Qt::Key_Escape && isFullScreen()) {
         leaveFullScreen();
+        event->accept();
         return;
     }
-    if (event->key() == Qt::Key_S) {        // M4.4: スナップショット
-        takeSnapshot();
+
+    // 4. レジストリ経由ディスパッチ
+    const KeyChord chord = keyChordFromEvent(event);
+    if (chord.key != 0 && registry_.dispatch(chord)) {
+        event->accept();
         return;
     }
+
     QMainWindow::keyPressEvent(event);
 }
 

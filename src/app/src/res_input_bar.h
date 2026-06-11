@@ -24,11 +24,23 @@ public:
     // 入力欄・送信ボタンを有効/無効にする（書き込み中は false で無効化）。
     void setInputEnabled(bool enabled);
 
+    // 入力欄がフォーカスを持っているか返す。
+    // MainWindow::keyPressEvent でショートカット素通し判定に使う（M5.1）。
+    bool inputHasFocus() const;
+
+    // 入力欄にプログラムでフォーカスを移す。
+    // MainWindow の Tab キー処理で呼ぶ（M5.1）。
+    void setInputFocus();
+
 signals:
     // 送信ボタンまたは Ctrl+Enter が押されたとき emit される。
     // message: 入力欄の全テキスト（改行を含む場合あり）。
     // 空文字列の場合は emit しない。
     void postRequested(const QString& message);
+
+protected:
+    // edit_ への Tab キーをインターセプトし、プレイヤーへフォーカスを戻す（M5.1）。
+    bool eventFilter(QObject* obj, QEvent* event) override;
 
 private slots:
     void onSendClicked();
