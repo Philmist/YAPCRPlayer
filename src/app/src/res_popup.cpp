@@ -53,22 +53,14 @@ void ResPopup::showRecent(const QList<yapcr::bbs::ResInfo>& all, QPoint anchorGl
         hide();
         return;
     }
-    // 既に Recent モードで表示中なら、配置と遡行位置は維持する。
-    // （タイトル帯上でのマウス移動ごとに再配置・最新リセットすると、
-    //   ポップアップがカーソルに追随して動き、遡行位置も毎回戻ってしまうため）
+    // 既に Recent モードで表示中なら、配置はカーソル追随で動かさない（初回のみ確定）。
+    // 遡行位置は followLatest_/anchorNumber_ から復元するため、hide/show を跨いでも
+    // 「見ていたレス」に戻る（右クリックで一旦閉じても最新へスナップしない）。
     const bool wasVisible = recentMode_ && isVisible();
-    const int  prevSize   = recentAll_.size();
-    // 最新に張り付いて見ていたか（初回表示は最新基点）
-    const bool atLatest   = !wasVisible || windowEnd_ >= prevSize;
 
     recentMode_ = true;
     recentAll_  = all;
-    if (atLatest) {
-        windowEnd_ = all.size();  // 最新へ追従
-    } else {
-        // 過去を遡行中: 位置を範囲内に保つ
-        windowEnd_ = qBound(qMin(kWindow, all.size()), windowEnd_, all.size());
-    }
+    applyWindowEnd();
     rebuildText();
     setFixedSize(computeSize());
 
@@ -85,15 +77,8 @@ void ResPopup::refreshRecent(const QList<yapcr::bbs::ResInfo>& all)
     if (!recentMode_ || !isVisible()) { return; }
     if (all.isEmpty()) { hide(); return; }
 
-    const int  prevSize = recentAll_.size();
-    const bool atLatest = windowEnd_ >= prevSize;  // 最新に張り付いていたか
-
     recentAll_ = all;
-    if (atLatest) {
-        windowEnd_ = all.size();  // 新着レスへ追従
-    } else {
-        windowEnd_ = qBound(qMin(kWindow, all.size()), windowEnd_, all.size());
-    }
+    applyWindowEnd();  // 最新追従 or アンカーレスへ復元（新着追記中も遡行位置を保持）
     rebuildText();
     setFixedSize(computeSize());
     // 内容が伸びてもタイトル帯の直上に収まるよう、保存アンカーから再配置する。
@@ -129,8 +114,43 @@ void ResPopup::scrollRecent(int delta)
     } else if (delta < 0) {
         windowEnd_ = qMin(windowEnd_ + 1, recentAll_.size());
     }
+    // 追従状態とアンカーを更新（hide/show を跨いだ位置復元の基点）。
+    // アンカーは末尾＝最も新しい可視レス。窓は最新側から上へ伸びるためここを固定すると安定する。
+    followLatest_ = (windowEnd_ >= recentAll_.size());
+    anchorNumber_ = (followLatest_ || windowEnd_ <= 0)
+                        ? QString()
+                        : recentAll_.at(windowEnd_ - 1).number;
     rebuildText();
     update();
+}
+
+void ResPopup::resetScroll()
+{
+    followLatest_ = true;
+    anchorNumber_.clear();
+    windowEnd_ = recentAll_.size();
+}
+
+void ResPopup::applyWindowEnd()
+{
+    if (followLatest_ || anchorNumber_.isEmpty()) {
+        windowEnd_ = recentAll_.size();  // 最新へ追従
+        return;
+    }
+    // アンカーレスを新リストから探す（末尾から走査）
+    int idx = -1;
+    for (int i = recentAll_.size() - 1; i >= 0; --i) {
+        if (recentAll_.at(i).number == anchorNumber_) { idx = i; break; }
+    }
+    if (idx < 0) {
+        // アンカーが直近窓から外れた → 最新へフォールバック
+        windowEnd_    = recentAll_.size();
+        followLatest_ = true;
+        anchorNumber_.clear();
+    } else {
+        // そのレスを末尾可視に（scroll と同じ下限クランプ）
+        windowEnd_ = qBound(qMin(kWindow, recentAll_.size()), idx + 1, recentAll_.size());
+    }
 }
 
 void ResPopup::hidePopup()

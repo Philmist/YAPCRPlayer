@@ -49,6 +49,10 @@ public:
     // Recent モードで表示中でなければ何もしない。
     void scrollRecent(int delta);
 
+    // [Recent モード] 遡行状態を最新基点へ戻す（スレッド切替時に呼ぶ）。
+    // 別スレッドのレス番号にアンカーが誤マッチするのを防ぐ。
+    void resetScroll();
+
     void hidePopup();
 
 protected:
@@ -66,6 +70,8 @@ private:
     QSize computeSize();
     // 保存した recentAnchor_ を基点に、タイトル帯の直上へ配置する（現在のサイズ基準）。
     void  placeRecent();
+    // followLatest_/anchorNumber_ から recentAll_ 基準で windowEnd_ を決める。
+    void  applyWindowEnd();
 
     // ---- Single モード ----
     QList<yapcr::bbs::ResInfo> resList_;
@@ -75,6 +81,8 @@ private:
     QList<yapcr::bbs::ResInfo> recentAll_;
     int     windowEnd_{0};  // 現在表示する末尾レスのインデックス（1始まり → サイズ基準）
     int     windowBegin_{0};  // rebuildText で確定した可視窓の先頭（トリム後）
+    bool    followLatest_{true};  // 最新レスに張り付いているか（初期＝最新基点）
+    QString anchorNumber_;  // 非追従時に末尾可視だったレス番号（hide/show を跨ぐ復元の基点）
     QPoint  recentAnchor_;  // 初回 showRecent 時のタイトル帯アンカー（再配置の基点）
 
     // ---- 共通 ----

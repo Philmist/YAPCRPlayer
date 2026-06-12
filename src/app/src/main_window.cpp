@@ -231,6 +231,7 @@ MainWindow::MainWindow(const config::Config& cfg,
             this, [this](const QString&) {
                 resListPane_->clearRes();
                 recentPopup_->hidePopup();
+                recentPopup_->resetScroll();  // 前スレの遡行位置を引きずらない
             });
 
     connect(session_, &SessionController::bbsPostFinished,
