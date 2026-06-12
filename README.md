@@ -4,7 +4,7 @@
 [libmpv](https://mpv.io/) で映像再生し、2ch/したらば系の掲示板をインライン表示・書き込みできます。
 
 本ソフトウェアは kasahara 氏 / PeerCast Station Project による
-[**PCRPlayer**](https://github.com/kasahr/PCRPlayer)（Copyright © 2009–2011, GPL）を
+[**PCRPlayer**](http://pecatv.s25.xrea.com/)（Copyright © 2009–2011, GPL）を
 libmpv / Qt6 ベースで再実装した派生版です（詳細は[ライセンス](#ライセンス)節）。
 
 > **⚠ 開発中（M6 仕上げフェーズ）。** 機能は随時追加中です。
@@ -86,7 +86,7 @@ YAPCRPlayer.exe http://localhost:7144/pls/ABC123 "チャンネル名" http://bbs
 原 PCRPlayer の著作権表示を以下のとおり保持します（GPL の条件に基づく）。
 
 > Copyright © 2009–2011 PeerCast Station Project, kasahara
-> 原リポジトリ: https://github.com/kasahr/PCRPlayer
+> 配布元（ソース・バイナリを zip で配布）: http://pecatv.s25.xrea.com/
 > サイト: http://pecastation.web.fc2.com/
 > ライセンス: GNU General Public License
 
