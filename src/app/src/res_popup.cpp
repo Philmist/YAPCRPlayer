@@ -138,6 +138,16 @@ void ResPopup::hidePopup()
     hide();
 }
 
+QList<yapcr::bbs::ResInfo> ResPopup::visibleReses() const
+{
+    if (!recentMode_ || !isVisible() || recentAll_.isEmpty()) {
+        return {};
+    }
+    const int end   = qBound(0, windowEnd_, recentAll_.size());
+    const int begin = qBound(0, windowBegin_, end);
+    return recentAll_.mid(begin, end - begin);
+}
+
 QSizeF ResPopup::layoutContent()
 {
     doc_.setDefaultFont(font());
@@ -224,6 +234,7 @@ void ResPopup::rebuildText()
         // クリップで隠れないようにする（最新を必ず見せる）。
         if (recentAll_.isEmpty()) {
             doc_.clear();
+            windowBegin_ = 0;
             return;
         }
         const int end = qBound(0, windowEnd_, recentAll_.size());
@@ -238,6 +249,7 @@ void ResPopup::rebuildText()
             }
             ++begin;  // 最古を 1 件落として再計測
         }
+        windowBegin_ = begin;  // 可視窓の先頭を確定（visibleReses 用）
         return;
     }
 

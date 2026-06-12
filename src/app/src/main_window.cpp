@@ -8,6 +8,7 @@
 #include "res_popup.h"       // M3.7: hover レス・ポップアップ
 #include "about_dialog.h"    // M6: バージョン情報ダイアログ
 #include "bbs/models.h"
+#include "bbs/extract.h"       // M6: 本文中 URL 抽出（h抜き正規化込み）
 #include "player/mpv_backend.h"
 #include "common/version.h"
 #include "window_geometry.h"   // M4.2: videoTargetForZoom / zoomPresets / sizePresets
@@ -36,10 +37,12 @@
 #include <QMouseEvent>
 #include <QCloseEvent>
 #include <QScreen>
+#include <QSet>
 #include <QShowEvent>
 #include <QStandardPaths>
 #include <QStatusBar>
 #include <QString>
+#include <QStringList>
 #include <QUrl>
 #include <QSplitter>
 #include <QVBoxLayout>
@@ -50,6 +53,22 @@
 #endif
 
 namespace yapcr::app {
+
+namespace {
+
+// 表示が極端に長い URL を中略する（実際に開くのは元 URL）。
+// メニュー項目が横に伸び過ぎないよう、先頭と末尾を残して中央を "…" で省略する。
+QString elideUrl(const QString& url, int maxChars = 72)
+{
+    if (url.size() <= maxChars) {
+        return url;
+    }
+    const int head = maxChars * 3 / 5;          // 先頭側を多めに残す
+    const int tail = maxChars - head - 1;        // 1 は "…" の分
+    return url.left(head) + QStringLiteral("…") + url.right(tail);
+}
+
+}  // namespace
 
 MainWindow::MainWindow(const config::Config& cfg,
                        const QString& configPath,
@@ -1209,8 +1228,41 @@ bool MainWindow::nativeEvent(const QByteArray& eventType, void* message, qintptr
 // 将来メニューバーを廃止して右クリックメニューに一本化する際の基盤。
 void MainWindow::contextMenuEvent(QContextMenuEvent* event)
 {
-    if (contextMenu_) {
-        contextMenu_->exec(event->globalPos());
+    if (!contextMenu_) {
+        return;
+    }
+
+    // 直近レスフロートが可視なら、そこに表示中の可視レスから URL を集め、
+    // メニュー上部に「開く」エントリとして差し込む（exec 後に除去する）。
+    // フロート非可視 or URL 無しのときは従来どおり既存メニューのみを表示する。
+    QList<QAction*> injected;
+    QSet<QString>   seen;
+    QList<QAction*> existing = contextMenu_->actions();
+    QAction* before = existing.isEmpty() ? nullptr : existing.constFirst();
+
+    for (const auto& res : recentPopup_->visibleReses()) {
+        for (const QString& url : yapcr::bbs::extractUrls(res.message)) {
+            if (seen.contains(url)) {
+                continue;  // 同一 URL は最初の1件だけ
+            }
+            seen.insert(url);
+            QAction* a = new QAction(elideUrl(url), contextMenu_);
+            a->setToolTip(url);
+            connect(a, &QAction::triggered, this,
+                    [url] { QDesktopServices::openUrl(QUrl(url)); });
+            contextMenu_->insertAction(before, a);
+            injected.append(a);
+        }
+    }
+    if (!injected.isEmpty()) {
+        injected.append(contextMenu_->insertSeparator(before));  // URL 群と既存項目の区切り
+    }
+
+    contextMenu_->exec(event->globalPos());
+
+    for (QAction* a : injected) {
+        contextMenu_->removeAction(a);
+        a->deleteLater();
     }
 }
 

@@ -40,6 +40,10 @@ public:
     // Recent モードで現在表示中か（呼び出し側がデータ更新の要否を判定するため）。
     bool isRecentVisible() const { return recentMode_ && isVisible(); }
 
+    // Recent モードで現在描画中の可視レス（トリム後の窓）。非表示・非 Recent 時は空。
+    // 右クリックメニューの URL 抽出など、「フロートに今見えているレス」を要する呼び出し側用。
+    QList<yapcr::bbs::ResInfo> visibleReses() const;
+
     // [Recent モード] 表示中の窓を delta 方向にスライドする（タイトル帯からの転送用）。
     // delta > 0（上回し）で過去へ、delta < 0（下回し）で最新へ。
     // Recent モードで表示中でなければ何もしない。
@@ -70,6 +74,7 @@ private:
     // ---- Recent モード ----
     QList<yapcr::bbs::ResInfo> recentAll_;
     int     windowEnd_{0};  // 現在表示する末尾レスのインデックス（1始まり → サイズ基準）
+    int     windowBegin_{0};  // rebuildText で確定した可視窓の先頭（トリム後）
     QPoint  recentAnchor_;  // 初回 showRecent 時のタイトル帯アンカー（再配置の基点）
 
     // ---- 共通 ----
