@@ -13,6 +13,16 @@
         "CMAKE_PREFIX_PATH": "C:/Qt/6.11.1/msvc2022_64",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
+    },
+    {
+      "name": "msvc-ninja-release",
+      "displayName": "MSVC 2022/2026 + Ninja (x64, Release)",
+      "description": "配布用 Release ビルド。vcvars64 環境で実行すること。Debug と別ツリー(build/msvc-ninja-release)。",
+      "inherits": "msvc-ninja",
+      "binaryDir": "${sourceDir}/build/msvc-ninja-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
     }
   ],
   "buildPresets": [
@@ -24,6 +34,17 @@
       "name": "deploy",
       "displayName": "deploy (windeployqt + libmpv → dist/)",
       "configurePreset": "msvc-ninja",
+      "targets": ["deploy"]
+    },
+    {
+      "name": "msvc-ninja-release",
+      "displayName": "Release build",
+      "configurePreset": "msvc-ninja-release"
+    },
+    {
+      "name": "deploy-release",
+      "displayName": "deploy Release (windeployqt + libmpv → dist/)",
+      "configurePreset": "msvc-ninja-release",
       "targets": ["deploy"]
     }
   ]

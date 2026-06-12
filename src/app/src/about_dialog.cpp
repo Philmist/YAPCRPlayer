@@ -36,6 +36,14 @@ AboutDialog::AboutDialog(QWidget* parent)
 
         "<hr/>"
 
+        "<p><b>派生元（原著作物）:</b><br/>"
+        "本ソフトウェアは <a href=\"https://github.com/kasahr/PCRPlayer\">PCRPlayer</a> "
+        "を移植・再実装した派生著作物です。<br/>"
+        "Copyright &copy; 2009&ndash;2011 PeerCast Station Project, kasahara &mdash; "
+        "GNU General Public License</p>"
+
+        "<hr/>"
+
         "<p><b>対応ソースの入手先（CORRESPONDING-SOURCE.md 参照）:</b><br/>"
         "YAPCRPlayer 本体: <i>公開 URL は CORRESPONDING-SOURCE.md を確認してください</i><br/>"
         "libmpv / FFmpeg: <a href=\"https://github.com/zhongfly/mpv-winbuild\">"
@@ -53,7 +61,7 @@ AboutDialog::AboutDialog(QWidget* parent)
         "— GPL-2.0-or-later / LGPL-2.1-or-later</li>"
         "<li><b>Qt6</b> — "
         "<a href=\"https://www.qt.io\">qt.io</a> "
-        "— LGPL-3.0-or-later (Qt Widgets / Gui / Core etc.)</li>"
+        "— GPLv3 (Qt Widgets / Gui / Core / Network / Core5Compat)</li>"
         "<li><b>toml++</b> — "
         "<a href=\"https://github.com/marzer/tomlplusplus\">marzer/tomlplusplus</a> "
         "— MIT License</li>"

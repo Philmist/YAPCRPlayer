@@ -28,6 +28,12 @@ qt_standard_project_setup()        # AUTOMOC/AUTOUIC/AUTORCC を有効化
 
 find_package(Mpv REQUIRED)
 
+# 配布用に再配布可能な VC++ ランタイム(vcruntime140.dll/msvcp140.dll 等)の実体パスを得る。
+# SKIP=ON で install() ルールは追加せず、変数 CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS だけ populate する。
+# Release 構成では再配布可能（release）版が選ばれる。deploy で dist/ に app-local 同梱する。
+set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP ON)
+include(InstallRequiredSystemLibraries)
+
 # toml++ — TOML 永続化ライブラリ（M5.0。submodule: third_party/tomlplusplus）
 # tests/example は不要なのでフラグで無効化する
 set(TOMLPLUSPLUS_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
@@ -75,6 +81,16 @@ if(WINDEPLOYQT_EXECUTABLE)
         COMMENT "windeployqt + libmpv ＋ ライセンス一式で dist/ を作成"
         VERBATIM
     )
+    # 再配布可能な VC++ ランタイム DLL を app-local 同梱し、配布物を自己完結させる
+    # （vc_redist インストーラ不要。Release 構成では release 版が選ばれる）。
+    if(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS)
+        add_custom_command(TARGET deploy POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS} "${_dist}/"
+            VERBATIM
+        )
+    endif()
+
     # 実際に取得した libmpv の同定情報（fetch-mpv-dev.ps1 が生成。存在時のみ同梱）。
     if(EXISTS "${MPV_DIR}/PROVENANCE.txt")
         add_custom_command(TARGET deploy POST_BUILD

@@ -60,8 +60,9 @@ DLL/プラグインを配布物に同梱する。
 
 - 利用ライセンス: **GPLv3**（Qt のオープンソース提供のうち GPLv3 オプションを選択）。
   GPLv3 は YAPCRPlayer 本体の GPLv3 と同一であり結合に制約はない。
+- ライセンス全文は `licenses/qt/Qt-LICENSE.txt`（GPLv3 / LGPLv3 を含む）に同梱。
 - Qt の対応ソースは The Qt Company / KDE が公開する公式ソースから入手できる。
-  使用バージョンと入手先は `CORRESPONDING-SOURCE.md` を参照。
+  使用バージョンと入手先は `licenses/qt/README.md` および `CORRESPONDING-SOURCE.md` を参照。
 
 ---
 
@@ -75,7 +76,19 @@ DLL/プラグインを配布物に同梱する。
 
 ---
 
-## 4. PeerCastStation（リンクなし・別プロセス）
+## 4. Microsoft Visual C++ ランタイム（システムライブラリ）
+
+配布物には MSVC の再配布可能ランタイム（`vcruntime140.dll` / `msvcp140.dll` /
+`concrt140.dll` 等）と、`windeployqt` が収集する DirectX/OpenGL シム
+（`d3dcompiler_47.dll` / `dxcompiler.dll` / `dxil.dll` / `opengl32sw.dll`）を app-local 同梱する。
+
+- これらは GPLv3 §1 の **System Library**（コンパイラ・OS 付属の標準コンポーネント）に該当し、
+  対応ソース提供義務の対象外。
+- MSVC ランタイムの app-local 同梱は Visual Studio 再頒布条件で許諾されている。
+
+---
+
+## 5. PeerCastStation（リンクなし・別プロセス）
 
 YAPCRPlayer は PeerCastStation と **HTTP（別プロセス、arm's-length）**で通信するのみで、
 コードのリンク・取り込みは行わない。したがって PeerCastStation（GPLv3）は YAPCRPlayer

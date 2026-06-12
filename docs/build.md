@@ -83,7 +83,26 @@ cmake --build --preset msvc-ninja --target deploy
 `scripts/mirror-mpv-source.ps1` で取得した対応ソース一式（GPLv3 §6(b)・3 年間保管）も
 頒布できる状態にしておくこと。
 
-## 5. トラブルシュート
+## 5. Release 配布物の作成（zip）
+
+配布用の Release バイナリは Debug とは別ツリー（`build/msvc-ninja-release/`）でビルドする。
+一括スクリプトで構成・ビルド・`deploy`・zip 化・SHA-256 出力まで行う：
+
+```powershell
+pwsh -File scripts/package-release.ps1
+```
+
+- 出力: `build/release-artifacts/YAPCRPlayer-v<ver>-win-x64.zip` と同名 `.sha256`。
+- バージョンは `CMakeLists.txt` の `project(... VERSION)` から自動取得（`-Version` で上書き可）。
+- `.pdb` / `.ilk` / `.exp` は配布物から除外される。
+- 既存の `dist/` を再圧縮するだけなら `-SkipBuild`、上書きは `-Force`。
+- **このスクリプトも vcvars64 環境（Native Tools シェル）で実行すること**（`cl` 検出に失敗すると停止）。
+
+Release では CMake の `InstallRequiredSystemLibraries` で特定した再配布可能な VC++ ランタイム
+（`vcruntime140.dll` / `msvcp140.dll` 等）を app-local 同梱し、Qt DLL はリリース版（`d` サフィックス無し）になる。
+配布物は vc_redist の別途インストール不要で、単体で他環境へ持ち出して起動できる。
+
+## 6. トラブルシュート
 
 - **`libmpv dev が見つからない`（構成エラー）**: 手順2のスクリプトを未実行。先に実行する。
 - **`cl が見つからない` / Ninja がコンパイラを検出しない**: vcvars64 を読み込んでいない。

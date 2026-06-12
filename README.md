@@ -3,6 +3,10 @@
 **YAPCRPlayer** は [PeerCast](https://www.peercast.org/) 実況配信向けの Windows デスクトッププレイヤーです。
 [libmpv](https://mpv.io/) で映像再生し、2ch/したらば系の掲示板をインライン表示・書き込みできます。
 
+本ソフトウェアは kasahara 氏 / PeerCast Station Project による
+[**PCRPlayer**](https://github.com/kasahr/PCRPlayer)（Copyright © 2009–2011, GPL）を
+libmpv / Qt6 ベースで再実装した派生版です（詳細は[ライセンス](#ライセンス)節）。
+
 > **⚠ 開発中（M6 仕上げフェーズ）。** 機能は随時追加中です。
 
 ---
@@ -77,6 +81,17 @@ YAPCRPlayer.exe http://localhost:7144/pls/ABC123 "チャンネル名" http://bbs
 
 **YAPCRPlayer 本体**: GNU General Public License v3 以降（GPL-3.0-or-later）
 → [`LICENSE`](LICENSE)
+
+**派生元（原著作物）**: 本ソフトウェアは **PCRPlayer** を移植・再実装した派生著作物です。
+原 PCRPlayer の著作権表示を以下のとおり保持します（GPL の条件に基づく）。
+
+> Copyright © 2009–2011 PeerCast Station Project, kasahara
+> 原リポジトリ: https://github.com/kasahr/PCRPlayer
+> サイト: http://pecastation.web.fc2.com/
+> ライセンス: GNU General Public License
+
+YAPCRPlayer のコードは PCRPlayer の挙動を参考に libmpv / Qt6 上で新規実装したものですが、
+GPL の系譜に従い同一ライセンス（GPL-3.0-or-later）で配布します。
 
 **サードパーティコンポーネント**（libmpv / FFmpeg / Qt / toml++）の帰属情報とライセンス:
 → [`licenses/THIRD-PARTY-NOTICES.md`](licenses/THIRD-PARTY-NOTICES.md)
