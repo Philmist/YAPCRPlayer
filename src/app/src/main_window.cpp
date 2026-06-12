@@ -166,6 +166,11 @@ MainWindow::MainWindow(const config::Config& cfg,
                 if (!resList.isEmpty() && !bbsUserClosed_) {
                     resInputBar_->show();
                 }
+                // 直近レスポップアップ表示中なら新着を反映（最新に張り付いていれば追従）。
+                // タイトル帯ホバー時しか更新されないと、帯上で静止中に最新レスが出ない。
+                if (recentPopup_->isRecentVisible()) {
+                    recentPopup_->refreshRecent(session_->bbsRecent(40));
+                }
             });
 
     // M3.7: hover ポップアップ用クエリプロバイダ注入（右ドック: アンカーポップアップ副次機能）

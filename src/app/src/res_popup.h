@@ -31,6 +31,15 @@ public:
     // all が空なら hide して返す。
     void showRecent(const QList<yapcr::bbs::ResInfo>& all, QPoint anchorGlobal);
 
+    // [Recent モード] 表示中に新着レス等でデータが更新されたとき、内容を差し替える。
+    // 最新に張り付いて見ていた場合は新しい最新へ追従し、過去を遡行中なら位置を保つ。
+    // 配置は保存したアンカーから再計算する（伸長してもタイトル帯の直上に収める）。
+    // Recent モードで表示中でなければ何もしない。
+    void refreshRecent(const QList<yapcr::bbs::ResInfo>& all);
+
+    // Recent モードで現在表示中か（呼び出し側がデータ更新の要否を判定するため）。
+    bool isRecentVisible() const { return recentMode_ && isVisible(); }
+
     // [Recent モード] 表示中の窓を delta 方向にスライドする（タイトル帯からの転送用）。
     // delta > 0（上回し）で過去へ、delta < 0（下回し）で最新へ。
     // Recent モードで表示中でなければ何もしない。
@@ -45,8 +54,14 @@ protected:
 
 private:
     void  rebuildText();
+    // Recent モードの表示 HTML を組み立てる（begin..end のレス＋範囲フッタ）。
+    QString buildRecentHtml(int begin, int end) const;
+    // 現在 doc_ に設定済みの HTML を確定幅で割り付けた内容サイズ（パディング含まず）。
+    QSizeF layoutContent();
     // doc_ の内容から表示サイズを算出する（kMaxWidth/kMaxHeight でクランプ）。
     QSize computeSize();
+    // 保存した recentAnchor_ を基点に、タイトル帯の直上へ配置する（現在のサイズ基準）。
+    void  placeRecent();
 
     // ---- Single モード ----
     QList<yapcr::bbs::ResInfo> resList_;
@@ -55,6 +70,7 @@ private:
     // ---- Recent モード ----
     QList<yapcr::bbs::ResInfo> recentAll_;
     int     windowEnd_{0};  // 現在表示する末尾レスのインデックス（1始まり → サイズ基準）
+    QPoint  recentAnchor_;  // 初回 showRecent 時のタイトル帯アンカー（再配置の基点）
 
     // ---- 共通 ----
     bool          recentMode_{false};
@@ -62,7 +78,7 @@ private:
 
     static constexpr int   kPadding   = 8;
     static constexpr int   kMaxWidth  = 600;
-    static constexpr int   kMaxHeight = 400;
+    static constexpr int   kMaxHeight = 640;  // この高さで収まらない分は最古レスから落とす
     static constexpr qreal kAlpha     = 0.92;  // ライト半透明背景の不透明度
     static constexpr int   kWindow    = 10;  // Recent モードで一度に表示するレス数
 };
