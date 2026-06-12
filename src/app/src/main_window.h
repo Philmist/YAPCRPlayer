@@ -7,11 +7,13 @@
 #include "config/config.h"   // M5.0: 設定構造体
 #include "action_registry.h" // M5.1: 中央アクションディスパッチャ
 #include "volume_state.h"    // M5.3: 音量クランプ・最小化連動ミュート状態機械
+#include "bbs/models.h"      // ThreadInfo（showThreadSelectDialog の引数型）
 
 class QAction;
 class QActionGroup;
 class QContextMenuEvent;
 class QKeyEvent;
+class QLabel;
 class QMenu;
 class QMouseEvent;
 class QSplitter;
@@ -101,6 +103,13 @@ private:
     // メニューバー廃止時はここを右クリックの唯一のメニューとする準備。
     void buildContextMenu();
 
+    // タイトルバー文字列を channelTitle_ / 解像度 / threadTitle_ から合成して setWindowTitle する。
+    void updateWindowTitle();
+
+    // スレッド選択ダイアログを表示し、ユーザーが選択したスレに切替える。
+    // bbsSubjectReady シグナル受信時に呼ぶ。
+    void showThreadSelectDialog(const QList<yapcr::bbs::ThreadInfo>& threads);
+
     // M5.3: 音量 / ミュート操作。
     void changeVolume(int delta);          // delta ステップで音量を変更して mpv に適用
     void applyMute();                      // muteState_.effective() を mpv に反映しメニューを同期
@@ -110,6 +119,8 @@ private:
 
     config::Config           config_;      // M5.0: 起動時ロード済み設定
     QString                  configPath_;  // M5.2: ReloadConfig/OpenConfigFolder 用パス
+    QString                  channelTitle_;   // タイトルバー: PeerCast チャンネル名
+    QString                  threadTitle_;    // タイトルバー: BBS スレッドタイトル
     bool                     quitStopRequested_{false};  // M5.5: QuitStop アクション起動フラグ
     ActionRegistry           registry_;   // M5.1: 中央アクションディスパッチャ
     int                      currentVolume_{100};  // M5.3: 現在の音量（0-100）
@@ -186,6 +197,10 @@ private:
 
     // M6: 右クリックコンテキストメニュー（将来のメニューバー廃止への準備）
     QMenu*   contextMenu_{nullptr};
+
+    // ステータスバー右側固定表示（音量 | bps | fps | 再生位置）
+    QLabel*  statusInfoLabel_{nullptr};
+    QTimer*  statusInfoTimer_{nullptr};
 
     // M5.1: プリセット QAction ポインタ（keyboard dispatch 後の check state 同期用）
     // sizeModeGroup_: actZoomPresets_ / actSizePresets_ / actFreeSize_

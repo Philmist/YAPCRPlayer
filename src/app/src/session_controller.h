@@ -78,6 +78,16 @@ public:
     // 現在のスレッドタイトル（未取得なら板タイトル、それも空なら空文字）
     QString bbsThreadTitle() const;
 
+    // subject.txt キャッシュを返す（bbsLoadSubjectForSelection 完了後に有効）
+    QList<yapcr::bbs::ThreadInfo> bbsSubject() const;
+
+    // スレッド選択用に subject をフェッチして bbsSubjectReady を emit する
+    // （自動最速選択とは別経路でフラグで分岐する）
+    void bbsLoadSubjectForSelection();
+
+    // ユーザーが選択したスレッドに切替える（key = ThreadInfo::key）
+    void bbsSelectThread(const QString& key);
+
     QString currentPath()    const { return path_; }
     QString currentName()    const { return name_; }
     QString currentContact() const { return contact_; }
@@ -108,6 +118,9 @@ signals:
     // スレッドが自動切替された（M3.9）。newTitle: 新スレタイトル。
     // MainWindow はこれを受けてレス一覧ペインをクリアする。
     void bbsThreadChanged(const QString& newTitle);
+
+    // スレッド選択用 subject ロード完了（bbsLoadSubjectForSelection 経由でのみ emit）
+    void bbsSubjectReady(const QList<yapcr::bbs::ThreadInfo>& threads);
 
 private slots:
     void onStreamResolved(const QString& streamUrl);
@@ -163,6 +176,11 @@ private:
     // M6: B1 — pls URL を UI から開いたとき viewxml の url フィールドで BBS 自動接続するフラグ。
     // start() で pls URL かつ !commandline_ のとき true にし、onChannelInfo() で1回だけ消費する。
     bool    autoConnectBbsOnInfo_{false};
+
+    // スレッド選択用 subject フェッチ中フラグ。
+    // true のとき onBbsSubjectLoaded は自動切替をスキップして bbsSubjectReady を emit する。
+    // bbsLoadSubjectForSelection() で true にし、onBbsSubjectLoaded/onBbsLoadFailed で false にリセット。
+    bool    pendingSubjectForSelection_{false};
 
     QString plsUrl_;     // /pls/ URL（PeerCast セッションのとき設定）
     QString streamUrl_;  // /stream/ URL（解決後）

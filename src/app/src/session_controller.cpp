@@ -350,6 +350,33 @@ void SessionController::bbsReset()
     }
 }
 
+QList<bbs::ThreadInfo> SessionController::bbsSubject() const
+{
+    return bbs_ ? bbs_->subject() : QList<bbs::ThreadInfo>{};
+}
+
+void SessionController::bbsLoadSubjectForSelection()
+{
+    if (!bbs_ || !bbs_->isValid()) {
+        emit statusMessage(tr("BBS に接続されていません"));
+        return;
+    }
+    pendingSubjectForSelection_ = true;
+    bbs_->loadSubject();
+}
+
+void SessionController::bbsSelectThread(const QString& key)
+{
+    if (!bbs_) { return; }
+    if (!bbs_->change(key)) {
+        emit statusMessage(tr("スレッド切替に失敗しました"));
+        return;
+    }
+    emit bbsThreadChanged(bbsThreadTitle());
+    bbs_->loadDat();
+    if (bbsPollTimer_) { bbsPollTimer_->start(); }
+}
+
 void SessionController::bbsPost(const QString& message)
 {
     if (!bbs_->isValid()) {
@@ -374,8 +401,15 @@ void SessionController::onBbsSettingLoaded()
 }
 
 // M3.9: subjectLoaded → 最速スレ選択 → スレ切替 → loadDat
-void SessionController::onBbsSubjectLoaded(const QList<bbs::ThreadInfo>&)
+// スレッド選択用フェッチ中（pendingSubjectForSelection_==true）のときは
+// 自動切替をスキップして bbsSubjectReady を emit し、UI 側にダイアログを委ねる。
+void SessionController::onBbsSubjectLoaded(const QList<bbs::ThreadInfo>& threads)
 {
+    if (pendingSubjectForSelection_) {
+        pendingSubjectForSelection_ = false;
+        emit bbsSubjectReady(threads);
+        return;
+    }
     bbs::ThreadInfo out;
     if (!bbs_->selectFastest(out)) {
         emit statusMessage(tr("BBS: 実況中スレが見つかりません（満了済みか対象外）"));
@@ -439,6 +473,11 @@ void SessionController::onBbsLoadFailed(bbs::BbsPhase phase, const QString& reas
         return QStringLiteral("unknown");
     }();
     emit statusMessage(tr("BBS 取得エラー [%1]: %2").arg(phaseStr, reason));
+    // スレッド選択用 subject フェッチが失敗したときはフラグをリセットする。
+    // リセットしないと次回の自動 subject（満了追従など）で bbsSubjectReady が誤 emit される。
+    if (phase == bbs::BbsPhase::Subject) {
+        pendingSubjectForSelection_ = false;
+    }
     // M3.9: cold-start 時に setting が失敗しても subject 取得は続行する。
     // キー未確定（board-URL 起動）かつ setting 失敗の場合、stop は既定 1000 のまま loadSubject へ進む。
     if (phase == bbs::BbsPhase::Setting && bbs_ && bbs_->key().isEmpty()) {

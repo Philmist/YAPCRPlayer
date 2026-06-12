@@ -22,6 +22,10 @@
 #include <QActionGroup>
 #include <QClipboard>
 #include <QContextMenuEvent>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QLabel>
+#include <QListWidget>
 #include <QCursor>
 #include <QDateTime>
 #include <QDebug>
@@ -121,6 +125,11 @@ MainWindow::MainWindow(const config::Config& cfg,
             .arg(QString::fromLatin1(common::appName()))
             .arg(QString::fromLatin1(common::appVersion())));
 
+    // ステータスバー右側固定ウィジェット（音量 | bps | fps | 再生位置）
+    statusInfoLabel_ = new QLabel(QStringLiteral("音量:— | — | — | —"), this);
+    statusInfoLabel_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    statusBar()->addPermanentWidget(statusInfoLabel_);
+
     // mpv バックエンド（attach は showEvent で行う）
     mpv_ = new player::MpvBackend(this);
     connect(mpv_, &player::MpvBackend::fileLoaded, this, [this] {
@@ -146,6 +155,7 @@ MainWindow::MainWindow(const config::Config& cfg,
         qDebug() << "[mpv] videoSizeChanged:" << w << "x" << h;
         lastVideoW_ = w;
         lastVideoH_ = h;
+        updateWindowTitle();
         if (currentSizeMode_ == SizeMode::Zoom && currentZoom_ > 0) {
             applyZoom(currentZoom_);
         } else if (currentSizeMode_ == SizeMode::Free && config_.display.start_zoom_100) {
@@ -206,6 +216,12 @@ MainWindow::MainWindow(const config::Config& cfg,
     // スレッドタイトル/件数が更新されたらタイトル帯に反映する
     connect(session_, &SessionController::bbsThreadInfoChanged,
             boardTitleBar_, &BoardTitleBar::setInfo);
+    // ウィンドウタイトルにもスレッドタイトルを反映する
+    connect(session_, &SessionController::bbsThreadInfoChanged,
+            this, [this](const QString& title, int) {
+                threadTitle_ = title;
+                updateWindowTitle();
+            });
     // タイトル帯に hover → 直近 40 件を取得して映像上にポップアップ表示
     connect(boardTitleBar_, &BoardTitleBar::hovered,
             this, [this](QPoint globalPos) {
@@ -228,8 +244,11 @@ MainWindow::MainWindow(const config::Config& cfg,
                 }
             });
     // M3.9: スレッド自動切替時にレス一覧をクリアする（差分追記の破損防止）
+    // ウィンドウタイトルのスレッドタイトルも更新する
     connect(session_, &SessionController::bbsThreadChanged,
-            this, [this](const QString&) {
+            this, [this](const QString& newTitle) {
+                threadTitle_ = newTitle;
+                updateWindowTitle();
                 resListPane_->clearRes();
                 recentPopup_->hidePopup();
                 recentPopup_->resetScroll();  // 前スレの遡行位置を引きずらない
@@ -259,6 +278,44 @@ MainWindow::MainWindow(const config::Config& cfg,
     dragMoveTimer_ = new QTimer(this);
     dragMoveTimer_->setInterval(8);  // ~120Hz: 滑らかな追従と CPU 負荷のバランス
     connect(dragMoveTimer_, &QTimer::timeout, this, &MainWindow::onDragMoveTick);
+
+    // ステータスバー右側固定表示の1秒更新タイマ。
+    // mpv_ は attach 前でも getPropertyDouble が 0.0 を返すだけなので常時 start しておく。
+    statusInfoTimer_ = new QTimer(this);
+    statusInfoTimer_->setInterval(1000);
+    connect(statusInfoTimer_, &QTimer::timeout, this, [this] {
+        const double bps = mpv_->getPropertyDouble(QStringLiteral("video-bitrate"));
+        const double fps = mpv_->getPropertyDouble(QStringLiteral("estimated-vf-fps"));
+        const double pos = mpv_->getPropertyDouble(QStringLiteral("time-pos"));
+
+        const QString bpsStr = (bps > 0.0)
+            ? QStringLiteral("%1kbps").arg(qRound(bps / 1000.0))
+            : QStringLiteral("-");
+        const QString fpsStr = (fps > 0.0)
+            ? QString::number(fps, 'f', 1) + QStringLiteral("fps")
+            : QStringLiteral("-");
+
+        QString posStr = QStringLiteral("-");
+        if (pos > 0.0) {
+            const int total = qRound(pos);
+            const int h     = total / 3600;
+            const int m     = (total % 3600) / 60;
+            const int s     = total % 60;
+            posStr = h > 0
+                ? QStringLiteral("%1:%2:%3")
+                    .arg(h)
+                    .arg(m, 2, 10, QLatin1Char('0'))
+                    .arg(s, 2, 10, QLatin1Char('0'))
+                : QStringLiteral("%1:%2")
+                    .arg(m)
+                    .arg(s, 2, 10, QLatin1Char('0'));
+        }
+
+        statusInfoLabel_->setText(
+            QStringLiteral("音量:%1 | %2 | %3 | %4")
+                .arg(currentVolume_).arg(bpsStr, fpsStr, posStr));
+    });
+    statusInfoTimer_->start();
 
     // M5.1/M5.2: アクションレジストリ設定 ——————————————————————————————————————————
     // TOML [shortcuts] の差分をデフォルト表に上書きしてキーマップを構築する。
@@ -820,6 +877,26 @@ MainWindow::MainWindow(const config::Config& cfg,
     // M6: 右クリックコンテキストメニューを構築する（メニュー構築完了後に呼ぶ）。
     buildContextMenu();
 
+    // スレッド選択ダイアログ: bbsSubjectReady を受けて表示する
+    connect(session_, &SessionController::bbsSubjectReady,
+            this, &MainWindow::showThreadSelectDialog);
+
+    // BoardTitleBar 右クリックメニュー（sage 切り替え + スレッド選択）
+    // actSagePost_ は BBS メニュー構築後に確定しているため buildContextMenu() 以降に接続する。
+    connect(boardTitleBar_, &BoardTitleBar::contextMenuRequested,
+            this, [this](QPoint globalPos) {
+                QMenu menu(this);
+                if (actSagePost_) {
+                    menu.addAction(actSagePost_);
+                }
+                menu.addSeparator();
+                QAction* actSelectThread = menu.addAction(tr("スレッド選択..."));
+                actSelectThread->setEnabled(!session_->currentContact().isEmpty());
+                connect(actSelectThread, &QAction::triggered, this,
+                        [this]{ session_->bbsLoadSubjectForSelection(); });
+                menu.exec(globalPos);
+            });
+
     // M5.5: ウィンドウジオメトリの起動時復元 ————————————————————————————————————
     // resize は show() 前でも有効（Qt はウィンドウ非表示時に仮想ジオメトリを保持）。
     // move はオフスクリーン復元を防ぐため、復元座標が可視スクリーン上にある場合のみ適用する。
@@ -860,8 +937,8 @@ MainWindow::MainWindow(const config::Config& cfg,
         }
     }
 
-    // ウィンドウタイトルの初期値
-    setWindowTitle(QString::fromLatin1(common::appName()));
+    // ウィンドウタイトルの初期値（channelTitle_ が空のためアプリ名のみ）
+    updateWindowTitle();
 }
 
 MainWindow::~MainWindow() = default;
@@ -912,8 +989,8 @@ void MainWindow::attachMpv() {
 }
 
 void MainWindow::onTitleChanged(const QString& title) {
-    setWindowTitle(QStringLiteral("%1  —  %2")
-                       .arg(QString::fromLatin1(common::appName()), title));
+    channelTitle_ = title;
+    updateWindowTitle();
 }
 
 void MainWindow::onStatusMessage(const QString& msg) {
@@ -1358,6 +1435,22 @@ void MainWindow::buildContextMenu()
         [this]{ registry_.trigger(ActionId::Topmost); });
     contextMenu_->addAction(tr("メニューバー表示切替\tX"), this,
         [this]{ registry_.trigger(ActionId::ToggleTitle); });
+    contextMenu_->addAction(tr("コンタクトURLをブラウザで開く"), this,
+        [this]{ registry_.trigger(ActionId::OpenContactInBrowser); });
+    contextMenu_->addSeparator();
+
+    // ---- 表示倍率（既存 QAction を再利用: チェック状態は自動同期）----
+    {
+        QMenu* sub = contextMenu_->addMenu(tr("表示倍率"));
+        sub->addAction(actFreeSize_);
+        for (QAction* a : actZoomPresets_) { sub->addAction(a); }
+    }
+
+    // ---- サイズ（既存 QAction を再利用）----
+    {
+        QMenu* sub = contextMenu_->addMenu(tr("サイズ"));
+        for (QAction* a : actSizePresets_) { sub->addAction(a); }
+    }
     contextMenu_->addSeparator();
 
     // ---- その他 ----
@@ -1366,6 +1459,56 @@ void MainWindow::buildContextMenu()
     contextMenu_->addSeparator();
     contextMenu_->addAction(tr("終了"), this,
         [this]{ registry_.trigger(ActionId::Quit); });
+}
+
+// タイトルバー文字列を合成して setWindowTitle する。
+// channelTitle_ が空（起動直後）のときはアプリ名のみ表示する。
+// 解像度は lastVideoW_/H_ が確定した後（videoSizeChanged 後）に付与される。
+// threadTitle_ は BBS スレッドタイトルが取得されたときに付与される。
+void MainWindow::updateWindowTitle()
+{
+    if (channelTitle_.isEmpty()) {
+        setWindowTitle(QString::fromLatin1(common::appName()));
+        return;
+    }
+    QString t = QStringLiteral("%1  —  %2")
+        .arg(QString::fromLatin1(common::appName()), channelTitle_);
+    if (lastVideoW_ > 0 && lastVideoH_ > 0) {
+        t += QStringLiteral(" (%1×%2)").arg(lastVideoW_).arg(lastVideoH_);
+    }
+    if (!threadTitle_.isEmpty()) {
+        t += QStringLiteral("  —  %1").arg(threadTitle_);
+    }
+    setWindowTitle(t);
+}
+
+// スレッド選択ダイアログを表示する。
+// bbsSubjectReady シグナル受信時に呼ばれ、ユーザー選択後に bbsSelectThread へ転送する。
+void MainWindow::showThreadSelectDialog(const QList<bbs::ThreadInfo>& threads)
+{
+    if (threads.isEmpty()) {
+        statusBar()->showMessage(tr("スレッド一覧が空です"), 3000);
+        return;
+    }
+    QDialog dlg(this);
+    dlg.setWindowTitle(tr("スレッド選択"));
+    auto* list = new QListWidget(&dlg);
+    list->setMinimumSize(500, 300);
+    for (const auto& t : threads) {
+        list->addItem(QStringLiteral("%1: %2 (%3)").arg(t.number, t.title).arg(t.count));
+    }
+    auto* btns = new QDialogButtonBox(
+        QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
+    connect(btns, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    connect(btns, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+    connect(list, &QListWidget::itemDoubleClicked, &dlg, &QDialog::accept);
+    auto* vbox = new QVBoxLayout(&dlg);
+    vbox->addWidget(list);
+    vbox->addWidget(btns);
+    if (dlg.exec() != QDialog::Accepted) { return; }
+    const int idx = list->currentRow();
+    if (idx < 0 || idx >= threads.size()) { return; }
+    session_->bbsSelectThread(threads[idx].key);
 }
 
 // M6: 一時停止をトグルする。

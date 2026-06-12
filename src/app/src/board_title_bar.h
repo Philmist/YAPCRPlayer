@@ -2,6 +2,7 @@
 
 #include <QWidget>
 
+class QContextMenuEvent;
 class QEnterEvent;
 class QWheelEvent;
 
@@ -31,6 +32,8 @@ signals:
     // ポップアップがカーソル追随で動くと帯外への移動が必要になりホイールが実質使えないため、
     // 帯上でホイールを受けてポップアップへ橋渡しする。
     void scrolled(int delta);
+    // 右クリックメニューを要求（MainWindow 側で QMenu を構築する）
+    void contextMenuRequested(QPoint globalPos);
 
 protected:
     void enterEvent(QEnterEvent* event) override;
@@ -38,6 +41,7 @@ protected:
     void leaveEvent(QEvent* event) override;
     void wheelEvent(QWheelEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
+    void contextMenuEvent(QContextMenuEvent* event) override;
 
 private:
     QString text_;

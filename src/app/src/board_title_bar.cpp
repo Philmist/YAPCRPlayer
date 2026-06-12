@@ -1,5 +1,6 @@
 #include "board_title_bar.h"
 
+#include <QContextMenuEvent>
 #include <QEnterEvent>
 #include <QMouseEvent>
 #include <QPainter>
@@ -43,6 +44,12 @@ void BoardTitleBar::wheelEvent(QWheelEvent* event)
 {
     // 帯上のホイールをポップアップの遡行へ転送する（カーソルは帯に置いたまま）
     emit scrolled(event->angleDelta().y());
+    event->accept();
+}
+
+void BoardTitleBar::contextMenuEvent(QContextMenuEvent* event)
+{
+    emit contextMenuRequested(event->globalPos());
     event->accept();
 }
 
