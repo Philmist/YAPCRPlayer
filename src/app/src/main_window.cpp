@@ -43,6 +43,7 @@
 #include <QStatusBar>
 #include <QString>
 #include <QStringList>
+#include <QTimer>
 #include <QUrl>
 #include <QSplitter>
 #include <QVBoxLayout>
@@ -253,6 +254,11 @@ MainWindow::MainWindow(const config::Config& cfg,
 
     // M6: sage フラグを config の最終保存値で初期化する（SagePost アクションで live トグル）。
     session_->setSage(config_.state.sage);
+
+    // 映像ドラッグ移動用ポーリングタイマ（ドラッグ中のみ start()）。
+    dragMoveTimer_ = new QTimer(this);
+    dragMoveTimer_->setInterval(8);  // ~120Hz: 滑らかな追従と CPU 負荷のバランス
+    connect(dragMoveTimer_, &QTimer::timeout, this, &MainWindow::onDragMoveTick);
 
     // M5.1/M5.2: アクションレジストリ設定 ——————————————————————————————————————————
     // TOML [shortcuts] の差分をデフォルト表に上書きしてキーマップを構築する。
@@ -1215,13 +1221,58 @@ bool MainWindow::nativeEvent(const QByteArray& eventType, void* message, qintptr
         const MSG* msg = static_cast<const MSG*>(message);
         if (msg->message == WM_PARENTNOTIFY) {
             const UINT childMsg = LOWORD(msg->wParam);
-            if (childMsg == WM_LBUTTONDOWN || childMsg == WM_RBUTTONDOWN) {
+            if (childMsg == WM_LBUTTONDOWN) {
+                // フォーカスを MainWindow に戻す（従来の動作を維持）
+                setFocus(Qt::MouseFocusReason);
+                // 映像ドラッグ移動を開始する（ポーリング方式。詳細は beginVideoDrag）。
+                beginVideoDrag();
+            } else if (childMsg == WM_RBUTTONDOWN) {
+                // 右クリックはフォーカス復帰のみ（contextMenuEvent は Qt が別途発火）
                 setFocus(Qt::MouseFocusReason);
             }
         }
     }
 #endif
     return QMainWindow::nativeEvent(eventType, message, result);
+}
+
+// 映像領域（mpv 子 HWND）の左押下を受けてウィンドウ・ドラッグを開始する。
+//
+// なぜネイティブ移動ループ（WM_NCLBUTTONDOWN/HTCAPTION）を使わないか:
+//   mpv の win32 VO は --wid 埋め込みでも子ウィンドウを専用スレッドで生成する。
+//   実マウス入力とキャプチャはその mpv スレッドの入力キューに属するため、GUI スレッドで
+//   ReleaseCapture()→WM_NCLBUTTONDOWN を投げてもキャプチャ・WM_MOUSEMOVE をまたげず移動しない。
+//   そこで GetCursorPos/GetAsyncKeyState（いずれもスレッド非依存のグローバル状態）を
+//   タイマーでポーリングし、GUI スレッド側で move() してドラッグを実現する。
+void MainWindow::beginVideoDrag()
+{
+#ifdef Q_OS_WIN
+    if (isMaximized() || isFullScreen()) { return; }  // 最大化・全画面中は移動しない
+    POINT cursorPos;
+    GetCursorPos(&cursorPos);
+    dragStartCursor_ = QPoint(cursorPos.x, cursorPos.y);
+    dragStartWindow_ = pos();  // トップレベルでは pos() == フレーム左上のスクリーン座標
+    dragMoveTimer_->start();
+#endif
+}
+
+// ドラッグ中に回るポーリング tick。左ボタンが離れるか状態が変われば停止する。
+void MainWindow::onDragMoveTick()
+{
+#ifdef Q_OS_WIN
+    // 左ボタンが離れた / 最大化・全画面へ遷移したらドラッグ終了
+    if ((GetAsyncKeyState(VK_LBUTTON) & 0x8000) == 0
+        || isMaximized() || isFullScreen()) {
+        dragMoveTimer_->stop();
+        return;
+    }
+    POINT cursorPos;
+    GetCursorPos(&cursorPos);
+    const QPoint delta(cursorPos.x - dragStartCursor_.x(),
+                       cursorPos.y - dragStartCursor_.y());
+    // 単純クリック（移動なし）では delta≈0 で move() が実質無効 → 誤移動しない。
+    move(dragStartWindow_ + delta);
+#endif
 }
 
 // M6: 右クリックコンテキストメニューを表示する。

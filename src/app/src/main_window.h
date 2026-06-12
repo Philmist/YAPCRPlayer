@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QMainWindow>
+#include <QPoint>
 
 #include "display_modes.h"   // M4.1: FitMode
 #include "config/config.h"   // M5.0: 設定構造体
@@ -14,6 +15,7 @@ class QKeyEvent;
 class QMenu;
 class QMouseEvent;
 class QSplitter;
+class QTimer;
 class QWidget;
 
 namespace yapcr::player {
@@ -167,6 +169,16 @@ private:
     QAction* actPause_{nullptr};           // 「一時停止」（チェック可）
     bool     isTopmost_{false};            // 最前面フラグ
     QAction* actTopmost_{nullptr};         // 「最前面」（チェック可）
+    // 映像領域ドラッグでのウィンドウ移動（Windows のみ）。
+    // mpv は --wid 子ウィンドウを専用スレッドで生成するため、ネイティブ移動ループ
+    // （WM_NCLBUTTONDOWN/HTCAPTION）はスレッド境界をまたいで機能しない。代わりに
+    // GetCursorPos/GetAsyncKeyState（スレッド非依存・グローバル）をタイマーでポーリングし
+    // GUI スレッド側で move() する方式を採る。
+    QTimer*  dragMoveTimer_{nullptr};      // ドラッグ中のみ回るポーリングタイマ
+    QPoint   dragStartCursor_;             // ドラッグ開始時のカーソル（スクリーン座標）
+    QPoint   dragStartWindow_;             // ドラッグ開始時のウィンドウ左上（スクリーン座標）
+    void     beginVideoDrag();             // WM_PARENTNOTIFY 左押下で呼ぶ（ドラッグ開始）
+    void     onDragMoveTick();             // タイマー tick: カーソル追従で move()
     QAction* actToggleTitle_{nullptr};     // 「メニューバー表示切替」（チェック可）
     QAction* actToggleStatus_{nullptr};    // 「ステータスバー表示切替」（チェック可）
     QAction* actMaximize_{nullptr};        // 「最大化」
