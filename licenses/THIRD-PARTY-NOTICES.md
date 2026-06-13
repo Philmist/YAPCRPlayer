@@ -86,12 +86,3 @@ DLL/プラグインを配布物に同梱する。
   対応ソース提供義務の対象外。
 - MSVC ランタイムの app-local 同梱は Visual Studio 再頒布条件で許諾されている。
 
----
-
-## 5. PeerCastStation（リンクなし・別プロセス）
-
-YAPCRPlayer は PeerCastStation と **HTTP（別プロセス、arm's-length）**で通信するのみで、
-コードのリンク・取り込みは行わない。したがって PeerCastStation（GPLv3）は YAPCRPlayer
-との結合著作物を構成せず、本配布物に同梱もしない（GPLv2 §2 / GPLv3 の「単なる集積」に
-あたらず、そもそも同梱しないため告知義務の対象外）。参照用 submodule
-`peercaststation/` はプロトコル参照目的でありビルドにも配布にも関与しない。

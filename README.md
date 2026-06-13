@@ -3,11 +3,9 @@
 **YAPCRPlayer** は [PeerCast](https://www.peercast.org/) 実況配信向けの Windows デスクトッププレイヤーです。
 [libmpv](https://mpv.io/) で映像再生し、2ch/したらば系の掲示板をインライン表示・書き込みできます。
 
-本ソフトウェアは kasahara 氏 / PeerCast Station Project による
-[**PCRPlayer**](http://pecatv.s25.xrea.com/)（Copyright © 2009–2011, GPL）を
+本ソフトウェアは narayado氏 による
+[**PCRPlayer**](http://pecatv.s25.xrea.com/)（Copyright © 2019, GPL）を
 libmpv / Qt6 ベースで再実装した派生版です（詳細は[ライセンス](#ライセンス)節）。
-
-> **⚠ 開発中（M6 仕上げフェーズ）。** 機能は随時追加中です。
 
 ---
 
@@ -33,7 +31,7 @@ libmpv / Qt6 ベースで再実装した派生版です（詳細は[ライセン
 |------|------|
 | OS | Windows 10/11 x64 |
 | ランタイム | Visual C++ 再頒布可能パッケージ（VS 2022 / v143 以降） |
-| Qt | Qt 6.x（配布パッケージに同梱予定） |
+| Qt | Qt 6.x |
 
 ---
 
@@ -77,17 +75,28 @@ YAPCRPlayer.exe http://localhost:7144/pls/ABC123 "チャンネル名" http://bbs
 
 ---
 
+## 参考文書
+
+`docs/`以下にLLM Coding Agentと対話した際に残した仕様等の文書を残しています。
+Coding Agentを使用して何かを作る際の参考としてお使いください。
+
+---
+
 ## ライセンス
 
 **YAPCRPlayer 本体**: GNU General Public License v3 以降（GPL-3.0-or-later）
 → [`LICENSE`](LICENSE)
 
 **派生元（原著作物）**: 本ソフトウェアは **PCRPlayer** を移植・再実装した派生著作物です。
-原 PCRPlayer の著作権表示を以下のとおり保持します（GPL の条件に基づく）。
+原 PCRPlayer(ver0.27) の著作権表示を以下のとおり保持します（GPL の条件に基づく）。
+(PCRPlayerはPeCaRecorderのバイナリに対して添付される形で配布されています)
 
-> Copyright © 2009–2011 PeerCast Station Project, kasahara
-> 配布元（ソース・バイナリを zip で配布）: http://pecatv.s25.xrea.com/
-> サイト: http://pecastation.web.fc2.com/
+> 【タイトル】 PeCaRecorder
+> 【ファイル】 PeCaRecorder.exe
+> 【著 作 者】 narayado
+
+PCRPlayer(ver0.27)のソース配布は以下:
+> 配布元: http://pecatv.s25.xrea.com/
 > ライセンス: GNU General Public License
 
 YAPCRPlayer のコードは PCRPlayer の挙動を参考に libmpv / Qt6 上で新規実装したものですが、
@@ -99,4 +108,4 @@ GPL の系譜に従い同一ライセンス（GPL-3.0-or-later）で配布しま
 **対応ソース（GPLv3 §6 書面オファー）**:
 → [`CORRESPONDING-SOURCE.md`](CORRESPONDING-SOURCE.md)
 
-連絡先: philmist &lt;knagi3@gmail.com&gt;
+(C) 2026 Philmist
