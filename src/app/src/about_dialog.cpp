@@ -39,7 +39,7 @@ AboutDialog::AboutDialog(QWidget* parent)
         "<p><b>派生元（原著作物）:</b><br/>"
         "本ソフトウェアは <a href=\"http://pecatv.s25.xrea.com/\">PCRPlayer</a> "
         "を移植・再実装した派生著作物です。<br/>"
-        "Copyright &copy; 2009&ndash;2011 PeerCast Station Project, kasahara &mdash; "
+        "Copyright &copy; narayado"
         "GNU General Public License</p>"
 
         "<hr/>"
