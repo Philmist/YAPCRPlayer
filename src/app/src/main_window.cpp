@@ -886,6 +886,27 @@ MainWindow::MainWindow(const config::Config& cfg,
     connect(boardTitleBar_, &BoardTitleBar::contextMenuRequested,
             this, [this](QPoint globalPos) {
                 QMenu menu(this);
+
+                // 直近レスフロートが可視なら、表示中の可視レスから URL を集めて
+                // メニュー先頭へ「開く」エントリとして差し込む。フロートはタイトル帯
+                // hover 中のみ可視なので、URL を開ける場所はこの帯上の右クリックに限られる。
+                QSet<QString> seen;
+                for (const auto& res : recentPopup_->visibleReses()) {
+                    for (const QString& url : yapcr::bbs::extractUrls(res.message)) {
+                        if (seen.contains(url)) {
+                            continue;  // 同一 URL は最初の1件だけ
+                        }
+                        seen.insert(url);
+                        QAction* a = menu.addAction(elideUrl(url));
+                        a->setToolTip(url);
+                        connect(a, &QAction::triggered, this,
+                                [url] { QDesktopServices::openUrl(QUrl(url)); });
+                    }
+                }
+                if (!seen.isEmpty()) {
+                    menu.addSeparator();  // URL 群と既存項目の区切り
+                }
+
                 if (actSagePost_) {
                     menu.addAction(actSagePost_);
                 }
@@ -1361,38 +1382,9 @@ void MainWindow::contextMenuEvent(QContextMenuEvent* event)
         return;
     }
 
-    // 直近レスフロートが可視なら、そこに表示中の可視レスから URL を集め、
-    // メニュー上部に「開く」エントリとして差し込む（exec 後に除去する）。
-    // フロート非可視 or URL 無しのときは従来どおり既存メニューのみを表示する。
-    QList<QAction*> injected;
-    QSet<QString>   seen;
-    QList<QAction*> existing = contextMenu_->actions();
-    QAction* before = existing.isEmpty() ? nullptr : existing.constFirst();
-
-    for (const auto& res : recentPopup_->visibleReses()) {
-        for (const QString& url : yapcr::bbs::extractUrls(res.message)) {
-            if (seen.contains(url)) {
-                continue;  // 同一 URL は最初の1件だけ
-            }
-            seen.insert(url);
-            QAction* a = new QAction(elideUrl(url), contextMenu_);
-            a->setToolTip(url);
-            connect(a, &QAction::triggered, this,
-                    [url] { QDesktopServices::openUrl(QUrl(url)); });
-            contextMenu_->insertAction(before, a);
-            injected.append(a);
-        }
-    }
-    if (!injected.isEmpty()) {
-        injected.append(contextMenu_->insertSeparator(before));  // URL 群と既存項目の区切り
-    }
-
+    // 映像本体上では直近レスフロートは既に不可視（タイトル帯 hover 中のみ可視）なので、
+    // ここでは URL 注入を行わない。レスフロート内 URL はタイトル帯の右クリックから開く。
     contextMenu_->exec(event->globalPos());
-
-    for (QAction* a : injected) {
-        contextMenu_->removeAction(a);
-        a->deleteLater();
-    }
 }
 
 // M6: 右クリックコンテキストメニューを構築する。
