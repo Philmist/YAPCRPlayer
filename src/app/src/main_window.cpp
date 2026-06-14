@@ -53,9 +53,6 @@
 #include <QVBoxLayout>
 #include <QWindowStateChangeEvent>
 #include <QtGlobal>
-#ifdef Q_OS_WIN
-#include <windows.h>
-#endif
 
 namespace yapcr::app {
 
@@ -82,9 +79,14 @@ MainWindow::MainWindow(const config::Config& cfg,
     , config_(cfg)
     , configPath_(configPath)
 {
+    // MpvBackend を最初に生成する。
+    // parent = nullptr にするのは破棄順序の保証のため:
+    //   VideoHostWidget のデストラクタが GL コンテキストを current にして
+    //   mpv_->destroyRenderContext() を呼ぶため、mpv_ は videoWidget_ より長生きしなければならない。
+    //   ~MainWindow() で videoWidget_ を先に明示的に delete し、その後 mpv_ を delete する。
+    mpv_ = new player::MpvBackend(nullptr);
+
     // M3.7: centralWidget を QWidget コンテナ化し、各ウィジェットを縦積みする。
-    // 注意: videoWidget_->winId() は attachMpv()（showEvent 後）で mpv に渡す。
-    //       コンテナ化は attach 前に確定させ、attach 後に reparent しないこと。
     {
         QWidget* central = new QWidget(this);
         QVBoxLayout* vl  = new QVBoxLayout(central);
@@ -95,9 +97,38 @@ MainWindow::MainWindow(const config::Config& cfg,
         videoResListSplitter_ = new QSplitter(Qt::Vertical, central);
         videoResListSplitter_->setChildrenCollapsible(false);
 
-        videoWidget_ = new VideoHostWidget(videoResListSplitter_);
+        videoWidget_ = new VideoHostWidget(mpv_, videoResListSplitter_);
         videoWidget_->setMinimumSize(640, 360);
         videoResListSplitter_->addWidget(videoWidget_);
+
+        // Render API: 映像ウィジェットのマウスイベントをシグナル経由で受け取る。
+        // （旧 nativeEvent + ドラッグポーリングの置き換え）
+        connect(videoWidget_, &VideoHostWidget::focusRequested,
+                this, [this]{ setFocus(Qt::MouseFocusReason); });
+        connect(videoWidget_, &VideoHostWidget::windowDragRequested,
+                this, [this](QPoint delta) {
+                    if (!isMaximized() && !isFullScreen())
+                        move(pos() + delta);
+                });
+        connect(videoWidget_, &VideoHostWidget::fullscreenToggleRequested,
+                this, &MainWindow::toggleFullScreen);
+        // contextMenu_ は buildContextMenu() で初期化されるが、
+        // シグナルが emit されるのは UI 表示後なので lambda 内では必ず非 null。
+        connect(videoWidget_, &VideoHostWidget::contextMenuRequested,
+                this, [this](QPoint globalPos) {
+                    if (contextMenu_) contextMenu_->exec(globalPos);
+                });
+        // Render API: initializeGL() が完了してから loadfile を送る。
+        // このシグナルの前に loadfile を送ると mpv が独自ウィンドウにフォールバックする。
+        connect(videoWidget_, &VideoHostWidget::renderContextReady,
+                this, [this] {
+                    renderReady_ = true;
+                    if (pending_.valid) {
+                        pending_.valid = false;
+                        session_->start(pending_.path, pending_.name,
+                                        pending_.contact, pending_.commandline);
+                    }
+                });
 
         resListPane_ = new ResListPane(videoResListSplitter_);
         resListPane_->setMinimumHeight(80);
@@ -130,8 +161,7 @@ MainWindow::MainWindow(const config::Config& cfg,
     statusInfoLabel_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     statusBar()->addPermanentWidget(statusInfoLabel_);
 
-    // mpv バックエンド（attach は showEvent で行う）
-    mpv_ = new player::MpvBackend(this);
+    // mpv バックエンドのシグナル配線（インスタンスはコンストラクタ冒頭で生成済み）
     connect(mpv_, &player::MpvBackend::fileLoaded, this, [this] {
         statusBar()->showMessage(tr("再生開始"));
         // M4.1: 再生開始後に選択中のフィットモードを確実に適用する
@@ -273,11 +303,6 @@ MainWindow::MainWindow(const config::Config& cfg,
 
     // M6: sage フラグを config の最終保存値で初期化する（SagePost アクションで live トグル）。
     session_->setSage(config_.state.sage);
-
-    // 映像ドラッグ移動用ポーリングタイマ（ドラッグ中のみ start()）。
-    dragMoveTimer_ = new QTimer(this);
-    dragMoveTimer_->setInterval(8);  // ~120Hz: 滑らかな追従と CPU 負荷のバランス
-    connect(dragMoveTimer_, &QTimer::timeout, this, &MainWindow::onDragMoveTick);
 
     // ステータスバー右側固定表示の1秒更新タイマ。
     // mpv_ は attach 前でも getPropertyDouble が 0.0 を返すだけなので常時 start しておく。
@@ -960,17 +985,41 @@ MainWindow::MainWindow(const config::Config& cfg,
 
     // ウィンドウタイトルの初期値（channelTitle_ が空のためアプリ名のみ）
     updateWindowTitle();
+
+    // Render API: mpv の Phase 1 attach をここ（コンストラクタ末尾）で行う。
+    // WID 埋め込み時代は winId()（show() 後でないと無効）が必要だったため showEvent に
+    // 置いていたが、Render API の attach() はウィンドウに一切依存しない。
+    // 一方 QOpenGLWidget の initializeGL()（Phase 2）は Qt6/Windows では show() 処理中に
+    // showEvent より先に走ることがあり、その時点で mpv_ が未生成だと initRenderContext が
+    // 早期 return して renderContextReady が永久に発火しなくなる（黒画面・再生不可）。
+    // attach をここで完了させておけば initializeGL がいつ走っても mpv_ が確定済みになる。
+    // applyMute() が actMute_ 等を参照するため、全アクション構築後のこの位置で呼ぶこと。
+    attachMpv();
 }
 
-MainWindow::~MainWindow() = default;
+MainWindow::~MainWindow()
+{
+    // GL コンテキスト破棄順序を保証する:
+    // VideoHostWidget::~VideoHostWidget() が makeCurrent() → mpv_->destroyRenderContext()
+    // を呼ぶため、videoWidget_ が先に破棄され、mpv_ がその時点でまだ生存していなければならない。
+    // mpv_ は Qt 親を持たない（nullptr）ため手動で delete する。
+    // videoWidget_ の delete は親（videoResListSplitter_）の children リストから
+    // 自動的に除去されるため、後から親が破棄されても二重 delete にはならない。
+    delete videoWidget_;
+    videoWidget_ = nullptr;
+
+    delete mpv_;
+    mpv_ = nullptr;
+}
 
 void MainWindow::openMedia(const QString& path,
                             const QString& name,
                             const QString& contact,
                             bool           commandline)
 {
-    if (!attached_) {
-        // show() がまだ来ていない — 引数を保持して showEvent で再呼び出す
+    if (!attached_ || !renderReady_) {
+        // show() がまだ来ていない、または initializeGL() 未完了 —
+        // いずれの場合も renderContextReady シグナルで処理する
         pending_ = {true, path, name, contact, commandline};
         return;
     }
@@ -979,13 +1028,11 @@ void MainWindow::openMedia(const QString& path,
 
 void MainWindow::showEvent(QShowEvent* event) {
     QMainWindow::showEvent(event);
+    // Render API では attach はコンストラクタ末尾で完了済み（attached_==true）。
+    // 念のためのフォールバックとして残すが通常は no-op。
+    // pending_ の処理は VideoHostWidget::renderContextReady シグナルで行う。
     if (!attached_) {
         attachMpv();
-        if (pending_.valid) {
-            pending_.valid = false;
-            session_->start(pending_.path, pending_.name,
-                            pending_.contact, pending_.commandline);
-        }
     }
 }
 
@@ -993,11 +1040,8 @@ void MainWindow::attachMpv() {
     if (attached_) { return; }
     attached_ = true;
 
-    // winId() は show() 後に実体化される。
-    // VideoHostWidget の WA_NativeWindow により HWND が確保されている。
-    // WId(=HWND__*) を quintptr に reinterpret_cast して MpvBackend に渡す。
-    const auto wid = static_cast<quintptr>(videoWidget_->winId());
-    if (!mpv_->attach(wid)) {
+    // Render API モード: wid 不要（VideoHostWidget::initializeGL() で Phase 2 が動く）。
+    if (!mpv_->attach()) {
         qWarning() << "[mpv] attach 失敗";
         statusBar()->showMessage(tr("mpv の初期化に失敗しました"));
         return;
@@ -1307,70 +1351,6 @@ void MainWindow::closeEvent(QCloseEvent* event)
 
     config::save(config_, configPath_);
     QMainWindow::closeEvent(event);
-}
-
-// 映像子ウィンドウ（mpv --wid）のクリックを検出して MainWindow にフォーカスを戻す。
-// mpv は VideoHostWidget 内に子 HWND を置くため Qt のマウスイベントが届かない。
-// WM_PARENTNOTIFY は子 HWND でのマウスボタン押下を祖先ウィンドウに伝播させる。
-bool MainWindow::nativeEvent(const QByteArray& eventType, void* message, qintptr* result)
-{
-#ifdef Q_OS_WIN
-    if (eventType == "windows_generic_MSG") {
-        const MSG* msg = static_cast<const MSG*>(message);
-        if (msg->message == WM_PARENTNOTIFY) {
-            const UINT childMsg = LOWORD(msg->wParam);
-            if (childMsg == WM_LBUTTONDOWN) {
-                // フォーカスを MainWindow に戻す（従来の動作を維持）
-                setFocus(Qt::MouseFocusReason);
-                // 映像ドラッグ移動を開始する（ポーリング方式。詳細は beginVideoDrag）。
-                beginVideoDrag();
-            } else if (childMsg == WM_RBUTTONDOWN) {
-                // 右クリックはフォーカス復帰のみ（contextMenuEvent は Qt が別途発火）
-                setFocus(Qt::MouseFocusReason);
-            }
-        }
-    }
-#endif
-    return QMainWindow::nativeEvent(eventType, message, result);
-}
-
-// 映像領域（mpv 子 HWND）の左押下を受けてウィンドウ・ドラッグを開始する。
-//
-// なぜネイティブ移動ループ（WM_NCLBUTTONDOWN/HTCAPTION）を使わないか:
-//   mpv の win32 VO は --wid 埋め込みでも子ウィンドウを専用スレッドで生成する。
-//   実マウス入力とキャプチャはその mpv スレッドの入力キューに属するため、GUI スレッドで
-//   ReleaseCapture()→WM_NCLBUTTONDOWN を投げてもキャプチャ・WM_MOUSEMOVE をまたげず移動しない。
-//   そこで GetCursorPos/GetAsyncKeyState（いずれもスレッド非依存のグローバル状態）を
-//   タイマーでポーリングし、GUI スレッド側で move() してドラッグを実現する。
-void MainWindow::beginVideoDrag()
-{
-#ifdef Q_OS_WIN
-    if (isMaximized() || isFullScreen()) { return; }  // 最大化・全画面中は移動しない
-    POINT cursorPos;
-    GetCursorPos(&cursorPos);
-    dragStartCursor_ = QPoint(cursorPos.x, cursorPos.y);
-    dragStartWindow_ = pos();  // トップレベルでは pos() == フレーム左上のスクリーン座標
-    dragMoveTimer_->start();
-#endif
-}
-
-// ドラッグ中に回るポーリング tick。左ボタンが離れるか状態が変われば停止する。
-void MainWindow::onDragMoveTick()
-{
-#ifdef Q_OS_WIN
-    // 左ボタンが離れた / 最大化・全画面へ遷移したらドラッグ終了
-    if ((GetAsyncKeyState(VK_LBUTTON) & 0x8000) == 0
-        || isMaximized() || isFullScreen()) {
-        dragMoveTimer_->stop();
-        return;
-    }
-    POINT cursorPos;
-    GetCursorPos(&cursorPos);
-    const QPoint delta(cursorPos.x - dragStartCursor_.x(),
-                       cursorPos.y - dragStartCursor_.y());
-    // 単純クリック（移動なし）では delta≈0 で move() が実質無効 → 誤移動しない。
-    move(dragStartWindow_ + delta);
-#endif
 }
 
 // M6: 右クリックコンテキストメニューを表示する。

@@ -36,12 +36,15 @@ class ResPopup;
 // アプリケーションのメインウィンドウ。
 //
 // 構成:
-//   中央: VideoHostWidget（mpv の --wid 埋め込み先）
+//   中央: VideoHostWidget（libmpv Render API による映像描画）
 //   下部: QStatusBar（ステータスメッセージ表示）
 //
 // 使い方:
-//   show() 後に openMedia() を呼ぶ。
-//   show() 時に mpv の attach が自動的に行われる（showEvent で一度だけ）。
+//   show() の前後どちらからでも openMedia() を呼べる。
+//   mpv の Phase 1 attach はコンストラクタ末尾で完了する（Render API は winId 不要のため）。
+//   Phase 2（GL コンテキスト初期化）は VideoHostWidget::initializeGL() で自動で行われる。
+//   initializeGL は Qt6/Windows では showEvent より先に走ることがあるため、attach を
+//   コンストラクタで先行させておかないと renderContextReady が発火しない点に注意。
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
@@ -68,7 +71,6 @@ protected:
     void contextMenuEvent(QContextMenuEvent* event) override;                    // M6: 右クリックコンテキストメニュー
     void changeEvent(QEvent* event) override;                                    // M5.3: 最小化/復帰検出（連動ミュート）
     void closeEvent(QCloseEvent* event) override;                               // M5.5: 終了時一括保存
-    bool nativeEvent(const QByteArray& eventType, void* message, qintptr* result) override; // 映像子 HWND クリック検出
 
 private slots:
     void onTitleChanged(const QString& title);
@@ -129,6 +131,7 @@ private:
     player::MpvBackend*      mpv_{nullptr};
     SessionController*       session_{nullptr};
     bool                     attached_{false};
+    bool                     renderReady_{false};  // initializeGL() 完了後 true（loadfile はこれ以降）
 
     // M2: 手動操作アクション
     QAction* actBump_{nullptr};
@@ -180,16 +183,8 @@ private:
     QAction* actPause_{nullptr};           // 「一時停止」（チェック可）
     bool     isTopmost_{false};            // 最前面フラグ
     QAction* actTopmost_{nullptr};         // 「最前面」（チェック可）
-    // 映像領域ドラッグでのウィンドウ移動（Windows のみ）。
-    // mpv は --wid 子ウィンドウを専用スレッドで生成するため、ネイティブ移動ループ
-    // （WM_NCLBUTTONDOWN/HTCAPTION）はスレッド境界をまたいで機能しない。代わりに
-    // GetCursorPos/GetAsyncKeyState（スレッド非依存・グローバル）をタイマーでポーリングし
-    // GUI スレッド側で move() する方式を採る。
-    QTimer*  dragMoveTimer_{nullptr};      // ドラッグ中のみ回るポーリングタイマ
-    QPoint   dragStartCursor_;             // ドラッグ開始時のカーソル（スクリーン座標）
-    QPoint   dragStartWindow_;             // ドラッグ開始時のウィンドウ左上（スクリーン座標）
-    void     beginVideoDrag();             // WM_PARENTNOTIFY 左押下で呼ぶ（ドラッグ開始）
-    void     onDragMoveTick();             // タイマー tick: カーソル追従で move()
+    // 映像領域ドラッグは VideoHostWidget::windowDragRequested シグナル経由で処理する。
+    // （Render API 移行により WM_PARENTNOTIFY ポーリング方式を撤去）
     QAction* actToggleTitle_{nullptr};     // 「メニューバー表示切替」（チェック可）
     QAction* actToggleStatus_{nullptr};    // 「ステータスバー表示切替」（チェック可）
     QAction* actMaximize_{nullptr};        // 「最大化」

@@ -36,6 +36,7 @@ qt_add_executable(YAPCRPlayer WIN32
 
 target_link_libraries(YAPCRPlayer PRIVATE
     Qt6::Widgets
+    Qt6::OpenGLWidgets   # Render API 移行: QOpenGLWidget
     yapcr::player
     yapcr::peercast
     yapcr::net

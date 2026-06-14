@@ -53,6 +53,12 @@ PCRPlayer の資産は「コードそのまま流用」ではなく、**BBS/Peer
   - libVLC の唯一の優位は VLC 4.0 の D3D11 出力コールバックだが、4.0 未リリースで 3.x は劣るため不採用。
 
 ### Q3. mpv 映像の埋め込み方式（C オミットを受けて再評価・撤回あり）
+
+> **【後日改訂 2026-06-15】この Q3 の結論（`--wid` 採用）は後に覆り、Render API へ再移行した。**
+> マウスイベント到達・ウィンドウドラッグの擬似実装撤去・クロスプラットフォーム化のため
+> `QOpenGLWidget` + `mpv_render_context` 方式へ移行済み。現行の正典は
+> `docs/render-api-migration.md`（実装時の訂正含む）。以下は当時の決定の歴史的記録として残す。
+
 - **当初**: Render API（`QOpenGLWidget`+`mpv_render_context`）で映像＋コメントを一枚合成、を検討。
 - **撤回 → 選択: `--wid` 子ウィンドウ（mpv が vo=gpu-next で直接提示）**。
 - **理由**: 後述 C のオミットで「一枚合成」の必要が消滅。色補正/スケーラ/スナップショットも
@@ -86,8 +92,11 @@ PCRPlayer の資産は「コードそのまま流用」ではなく、**BBS/Peer
 - **ライセンス（確定）**: **GPLv3**（参照元 PCRPlayer が GPLv3 のため継承）。よって GPL コンポーネントの
   利用に制約はなく、Qt は GPLv3 で、libmpv/FFmpeg も任意構成（GPL 有効ビルド含む）で利用可。
   「LGPL でクローズド配布」という以前の検討は本方針では不要（過去の選択肢として残すのみ）。
-- **言語/UI**: C++20 + Qt 6（ハイブリッド：周辺 UI/レス欄はネイティブ Qt、映像は mpv `--wid`）。
-- **再生**: libmpv（`vo=gpu-next`）。HW デコード/色補正/スケーラ/スナップショットは mpv 標準機能。
+- **言語/UI**: C++20 + Qt 6（ハイブリッド：周辺 UI/レス欄はネイティブ Qt、映像は mpv）。
+  ※【後日改訂 2026-06-15】映像埋め込みは `--wid` から Render API（`QOpenGLWidget`）へ移行済み（Q3 注記参照）。
+- **再生**: libmpv。【後日改訂 2026-06-15】出力は Render API 移行に伴い `vo=gpu-next` から
+  **`vo=libmpv`**（`mpv_render_context` 経由で `QOpenGLWidget` の FBO に描画）へ変更。
+  HW デコード/色補正/スケーラ/スナップショットは引き続き mpv 標準機能。
 - **BBS 表示**: hover レス・ポップアップ（トップレベル半透明 Qt ウィジェット）＋任意の簡易テキスト一覧ペイン。
 - **CLI 起動互換（厳守）**: `PCRPlayer.exe <path> <name> <contact>`（path=再生URL, name=チャンネル名,
   contact=掲示板URL）。3引数時のみ commandline 扱いで BBS 自動接続。
