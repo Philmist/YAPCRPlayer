@@ -34,10 +34,13 @@ signals:
     void scrolled(int delta);
     // 右クリックメニューを要求（MainWindow 側で QMenu を構築する）
     void contextMenuRequested(QPoint globalPos);
+    // 帯のダブルクリックで全画面トグルを要求（MainWindow::toggleFullScreen に接続）
+    void fullscreenToggleRequested();
 
 protected:
     void enterEvent(QEnterEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
+    void mouseDoubleClickEvent(QMouseEvent* event) override;
     void leaveEvent(QEvent* event) override;
     void wheelEvent(QWheelEvent* event) override;
     void paintEvent(QPaintEvent* event) override;

@@ -111,10 +111,11 @@ void VideoHostWidget::mouseReleaseEvent(QMouseEvent* event)
 
 void VideoHostWidget::mouseDoubleClickEvent(QMouseEvent* event)
 {
+    // accept して親への伝播を止める（contextMenuEvent と対称。二重トグルの再発防止）。
     if (event->button() == Qt::LeftButton) {
         emit fullscreenToggleRequested();
     }
-    QOpenGLWidget::mouseDoubleClickEvent(event);
+    event->accept();
 }
 
 void VideoHostWidget::contextMenuEvent(QContextMenuEvent* event)

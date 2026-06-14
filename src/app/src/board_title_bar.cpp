@@ -34,6 +34,16 @@ void BoardTitleBar::mouseMoveEvent(QMouseEvent* event)
     emit hovered(event->globalPosition().toPoint());
 }
 
+void BoardTitleBar::mouseDoubleClickEvent(QMouseEvent* event)
+{
+    // 映像外でも帯のダブルクリックで全画面トグルを維持する（catch-all 撤去の代替）。
+    // accept して親（MainWindow）への伝播を止める。
+    if (event->button() == Qt::LeftButton) {
+        emit fullscreenToggleRequested();
+    }
+    event->accept();
+}
+
 void BoardTitleBar::leaveEvent(QEvent* event)
 {
     QWidget::leaveEvent(event);

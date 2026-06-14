@@ -38,7 +38,6 @@
 #include <QKeyEvent>
 #include <QMenu>
 #include <QMenuBar>
-#include <QMouseEvent>
 #include <QCloseEvent>
 #include <QScreen>
 #include <QSet>
@@ -273,6 +272,9 @@ MainWindow::MainWindow(const config::Config& cfg,
                     recentPopup_->hidePopup();
                 }
             });
+    // タイトル帯のダブルクリック → 全画面トグル（映像外領域の全画面化を維持）
+    connect(boardTitleBar_, &BoardTitleBar::fullscreenToggleRequested,
+            this, &MainWindow::toggleFullScreen);
     // M3.9: スレッド自動切替時にレス一覧をクリアする（差分追記の破損防止）
     // ウィンドウタイトルのスレッドタイトルも更新する
     connect(session_, &SessionController::bbsThreadChanged,
@@ -1225,14 +1227,8 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
     QMainWindow::keyPressEvent(event);
 }
 
-// ダブルクリックで全画面トグル。
-// 注意: --wid 埋め込みでは mpv が映像領域に子 HWND を置くため、映像上のダブルクリックは
-//       Qt に届かない場合がある（ベストエフォート）。非映像領域（タイトル帯など）では届く。
-void MainWindow::mouseDoubleClickEvent(QMouseEvent* event)
-{
-    toggleFullScreen();
-    QMainWindow::mouseDoubleClickEvent(event);
-}
+// 全画面トグルは VideoHostWidget / BoardTitleBar の fullscreenToggleRequested
+// シグナル経由で受け取る（旧 --wid 時代の catch-all な mouseDoubleClickEvent は撤去）。
 
 // M4.4: スナップショット ——————————————————————————————————————————————————————
 

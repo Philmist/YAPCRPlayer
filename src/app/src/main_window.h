@@ -15,7 +15,6 @@ class QContextMenuEvent;
 class QKeyEvent;
 class QLabel;
 class QMenu;
-class QMouseEvent;
 class QSplitter;
 class QTimer;
 class QWidget;
@@ -67,7 +66,6 @@ public:
 protected:
     void showEvent(QShowEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;                               // M4.3: F=全画面トグル, Esc=全画面解除
-    void mouseDoubleClickEvent(QMouseEvent* event) override;                     // M4.3: ダブルクリックで全画面トグル
     void contextMenuEvent(QContextMenuEvent* event) override;                    // M6: 右クリックコンテキストメニュー
     void changeEvent(QEvent* event) override;                                    // M5.3: 最小化/復帰検出（連動ミュート）
     void closeEvent(QCloseEvent* event) override;                               // M5.5: 終了時一括保存
