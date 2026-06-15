@@ -1,4 +1,5 @@
 qt_add_executable(YAPCRPlayer WIN32
+    app.rc
     src/main.cpp
     src/main_window.cpp
     src/main_window.h
