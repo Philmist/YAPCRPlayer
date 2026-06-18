@@ -1,4 +1,5 @@
 #include <QApplication>
+#include <QIcon>
 #include <QStringList>
 
 #include <clocale>
@@ -8,6 +9,7 @@
 
 int main(int argc, char** argv) {
     QApplication app(argc, argv);
+    app.setWindowIcon(QIcon(":/icons/app-icon.ico"));
 
     // libmpv はオプション値の小数点記号として "." を期待する。
     // QApplication がシステムロケールを設定した後に LC_NUMERIC を "C" に戻す。
