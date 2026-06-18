@@ -9,7 +9,14 @@
 
 int main(int argc, char** argv) {
     QApplication app(argc, argv);
-    app.setWindowIcon(QIcon(":/icons/app-icon.ico"));
+    // タイトルバー・タスクバー用アイコンを複数サイズ PNG で構築して設定する。
+    // PNG は QtGui 組み込みデコーダで読めるため qico プラグイン不要。
+    QIcon appIcon;
+    appIcon.addFile(QStringLiteral(":/icons/app-icon-16.png"),  QSize(16, 16));
+    appIcon.addFile(QStringLiteral(":/icons/app-icon-32.png"),  QSize(32, 32));
+    appIcon.addFile(QStringLiteral(":/icons/app-icon-48.png"),  QSize(48, 48));
+    appIcon.addFile(QStringLiteral(":/icons/app-icon-256.png"), QSize(256, 256));
+    app.setWindowIcon(appIcon);
 
     // libmpv はオプション値の小数点記号として "." を期待する。
     // QApplication がシステムロケールを設定した後に LC_NUMERIC を "C" に戻す。

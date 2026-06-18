@@ -1,6 +1,5 @@
 qt_add_executable(YAPCRPlayer WIN32
     app.rc
-    app.qrc
     src/main.cpp
     src/main_window.cpp
     src/main_window.h
@@ -34,6 +33,19 @@ qt_add_executable(YAPCRPlayer WIN32
     src/about_dialog.h
     src/media_source.h         # M5.4: 再生ソース種別判定（ヘッダオンリー）
     src/restore_state.h        # M5.5: [restore]×[state] 復元値選択（ヘッダオンリー）
+)
+
+# アプリアイコン（PNG）を Qt リソースとして埋め込む。
+# AUTORCC 任せにせず qt_add_resources() で明示的に処理することで確実にビルドされる。
+# PNG は QtGui 組み込みデコーダで読めるため qico プラグイン不要（bin 直起動でも動く）。
+qt_add_resources(YAPCRPlayer "app_icons"
+    PREFIX "/icons"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/../icon"
+    FILES
+        "${CMAKE_CURRENT_SOURCE_DIR}/../icon/app-icon-16.png"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../icon/app-icon-32.png"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../icon/app-icon-48.png"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../icon/app-icon-256.png"
 )
 
 target_link_libraries(YAPCRPlayer PRIVATE
