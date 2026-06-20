@@ -310,38 +310,7 @@ MainWindow::MainWindow(const config::Config& cfg,
     // mpv_ は attach 前でも getPropertyDouble が 0.0 を返すだけなので常時 start しておく。
     statusInfoTimer_ = new QTimer(this);
     statusInfoTimer_->setInterval(1000);
-    connect(statusInfoTimer_, &QTimer::timeout, this, [this] {
-        const double bps = mpv_->getPropertyDouble(QStringLiteral("video-bitrate"));
-        const double fps = mpv_->getPropertyDouble(QStringLiteral("estimated-vf-fps"));
-        const double pos = mpv_->getPropertyDouble(QStringLiteral("time-pos"));
-
-        const QString bpsStr = (bps > 0.0)
-            ? QStringLiteral("%1kbps").arg(qRound(bps / 1000.0))
-            : QStringLiteral("-");
-        const QString fpsStr = (fps > 0.0)
-            ? QString::number(fps, 'f', 1) + QStringLiteral("fps")
-            : QStringLiteral("-");
-
-        QString posStr = QStringLiteral("-");
-        if (pos > 0.0) {
-            const int total = qRound(pos);
-            const int h     = total / 3600;
-            const int m     = (total % 3600) / 60;
-            const int s     = total % 60;
-            posStr = h > 0
-                ? QStringLiteral("%1:%2:%3")
-                    .arg(h)
-                    .arg(m, 2, 10, QLatin1Char('0'))
-                    .arg(s, 2, 10, QLatin1Char('0'))
-                : QStringLiteral("%1:%2")
-                    .arg(m)
-                    .arg(s, 2, 10, QLatin1Char('0'));
-        }
-
-        statusInfoLabel_->setText(
-            QStringLiteral("音量:%1 | %2 | %3 | %4")
-                .arg(currentVolume_).arg(bpsStr, fpsStr, posStr));
-    });
+    connect(statusInfoTimer_, &QTimer::timeout, this, &MainWindow::refreshStatusInfo);
     statusInfoTimer_->start();
 
     // M5.1/M5.2: アクションレジストリ設定 ——————————————————————————————————————————
@@ -1289,6 +1258,43 @@ void MainWindow::changeVolume(int delta)
     currentVolume_ = applyVolumeStep(currentVolume_, delta);
     mpv_->setPropertyDouble(QStringLiteral("volume"), static_cast<double>(currentVolume_));
     statusBar()->showMessage(tr("音量: %1%").arg(currentVolume_), 2000);
+    refreshStatusInfo();  // タイマー待ちせず右側固定ラベルへ即時反映する
+}
+
+// ステータスバー右側固定ラベルの表示内容を現在値で再構築する。
+// mpv_ は attach 前でも getPropertyDouble が 0.0 を返すだけなので常時呼んでよい。
+void MainWindow::refreshStatusInfo()
+{
+    const double bps = mpv_->getPropertyDouble(QStringLiteral("video-bitrate"));
+    const double fps = mpv_->getPropertyDouble(QStringLiteral("estimated-vf-fps"));
+    const double pos = mpv_->getPropertyDouble(QStringLiteral("time-pos"));
+
+    const QString bpsStr = (bps > 0.0)
+        ? QStringLiteral("%1kbps").arg(qRound(bps / 1000.0))
+        : QStringLiteral("-");
+    const QString fpsStr = (fps > 0.0)
+        ? QString::number(fps, 'f', 1) + QStringLiteral("fps")
+        : QStringLiteral("-");
+
+    QString posStr = QStringLiteral("-");
+    if (pos > 0.0) {
+        const int total = qRound(pos);
+        const int h     = total / 3600;
+        const int m     = (total % 3600) / 60;
+        const int s     = total % 60;
+        posStr = h > 0
+            ? QStringLiteral("%1:%2:%3")
+                .arg(h)
+                .arg(m, 2, 10, QLatin1Char('0'))
+                .arg(s, 2, 10, QLatin1Char('0'))
+            : QStringLiteral("%1:%2")
+                .arg(m)
+                .arg(s, 2, 10, QLatin1Char('0'));
+    }
+
+    statusInfoLabel_->setText(
+        QStringLiteral("音量:%1 | %2 | %3 | %4")
+            .arg(currentVolume_).arg(bpsStr, fpsStr, posStr));
 }
 
 // M5.3: muteState_.effective() を mpv の mute プロパティに反映し、メニューを同期する。

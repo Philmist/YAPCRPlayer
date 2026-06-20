@@ -114,6 +114,10 @@ private:
     void changeVolume(int delta);          // delta ステップで音量を変更して mpv に適用
     void applyMute();                      // muteState_.effective() を mpv に反映しメニューを同期
 
+    // ステータスバー右側固定ラベル(statusInfoLabel_)の表示内容を現在値で再構築する。
+    // タイマーの定期更新と、音量変更など即時反映したい経路の両方から呼ぶ。
+    void refreshStatusInfo();
+
     // M6: 一時停止状態をトグルして mpv に反映する。
     void togglePause();
 
