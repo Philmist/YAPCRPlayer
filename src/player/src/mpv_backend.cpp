@@ -67,6 +67,14 @@ bool MpvBackend::attach() {
         checkMpvError(mpv_set_option_string(h, "input-default-bindings", "no"));
         checkMpvError(mpv_set_option_string(h, "input-vo-keyboard",      "no"));
 
+        // デマクサに ffmpeg(lavf) を強制する。
+        // mpv のネイティブ Matroska デマクサ(demux_mkv)は v0.40〜v0.41 で回帰し、
+        // PeerCastStation が送出するライブ MKV（unknown-size cluster 等の非標準構成）を
+        // "Corrupt file detected. Trying to resync..." と誤判定して resync ループに陥り
+        // 1フレームも再生できなくなる（v0.39 では再生可、素の mpv.exe v0.41 でも再現）。
+        // lavf は完全に別実装の matroska デマクサで当該ストリームを通せる（FLV/TS も問題なし）。
+        checkMpvError(mpv_set_option_string(h, "demuxer", "lavf"));
+
         // キャッシュ（実況用の控えめな有界値）
         checkMpvError(mpv_set_option_string(h, "cache",                  "yes"));
         checkMpvError(mpv_set_option_string(h, "demuxer-max-bytes",      "32MiB"));
