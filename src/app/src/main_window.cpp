@@ -1292,9 +1292,16 @@ void MainWindow::refreshStatusInfo()
                 .arg(s, 2, 10, QLatin1Char('0'));
     }
 
+    QString volStr = QStringLiteral("-");
+    if (muteState_.effective()) {
+        volStr = QStringLiteral("-M-");
+    } else {
+        volStr = QStringLiteral("%1").arg(currentVolume_);
+    }
+
     statusInfoLabel_->setText(
         QStringLiteral("音量:%1 | %2 | %3 | %4")
-            .arg(currentVolume_).arg(bpsStr, fpsStr, posStr));
+            .arg(volStr, bpsStr, fpsStr, posStr));
 }
 
 // M5.3: muteState_.effective() を mpv の mute プロパティに反映し、メニューを同期する。
