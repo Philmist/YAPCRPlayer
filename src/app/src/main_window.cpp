@@ -1267,6 +1267,8 @@ void MainWindow::refreshStatusInfo()
 {
     const double bps = mpv_->getPropertyDouble(QStringLiteral("video-bitrate"));
     const double fps = mpv_->getPropertyDouble(QStringLiteral("estimated-vf-fps"));
+    // time-pos は mpv の rebase-start-time=no（mpv_backend.cpp）により、再生開始起点
+    // ではなくコンテナの絶対 PTS＝配信開始からの経過時間を返す（PCRPlayer 互換）。
     const double pos = mpv_->getPropertyDouble(QStringLiteral("time-pos"));
 
     const QString bpsStr = (bps > 0.0)

@@ -75,6 +75,12 @@ bool MpvBackend::attach() {
         // lavf は完全に別実装の matroska デマクサで当該ストリームを通せる（FLV/TS も問題なし）。
         checkMpvError(mpv_set_option_string(h, "demuxer", "lavf"));
 
+        // 配信開始からの経過時間を time-pos に反映させる（PCRPlayer 互換の時間表示）。
+        // 既定 (=yes) はストリーム先頭 PTS を 0 に平行移動してしまうため、ライブ配信の
+        // 「配信開始からの経過」が失われ、再生開始=0 起点になる。no にすると time-pos が
+        // コンテナの絶対 PTS（＝配信開始からの経過）を返し、途中参加でも配信経過を表示できる。
+        checkMpvError(mpv_set_option_string(h, "rebase-start-time", "no"));
+
         // キャッシュ（実況用の控えめな有界値）
         checkMpvError(mpv_set_option_string(h, "cache",                  "yes"));
         checkMpvError(mpv_set_option_string(h, "demuxer-max-bytes",      "32MiB"));
