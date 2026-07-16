@@ -47,7 +47,9 @@ std::optional<KeyChord> parseKeyChord(const QString& s);
 QString keyChordToString(const KeyChord& c);
 
 // QKeyEvent → KeyChord（ライブイベント正規化）。
-//   ev->key() + ev->modifiers() をそのまま格納する。
+//   ev->key() + ev->modifiers() を格納する。
+//   ただし Shift 修飾時は Windows で数字/記号キーの key() がシフト後記号へ化けるため、
+//   nativeVirtualKey からシフト前の基底キーを復元して parseKeyChord 側と揃える。
 //   修飾キー単体押下（Qt::Key_Shift 等）は {0, NoModifier} を返す。
 KeyChord keyChordFromEvent(const QKeyEvent* ev);
 

@@ -3,6 +3,12 @@
 #include <QDebug>
 #include <QKeySequence>
 
+#ifdef Q_OS_WIN
+#  define WIN32_LEAN_AND_MEAN
+#  define NOMINMAX
+#  include <windows.h>
+#endif
+
 namespace yapcr::app {
 
 // ---- テンキー Num プレフィックス変換テーブル ----
@@ -105,7 +111,35 @@ KeyChord keyChordFromEvent(const QKeyEvent* ev)
         default:
             break;
     }
-    return KeyChord{key, ev->modifiers()};
+
+    const Qt::KeyboardModifiers mods = ev->modifiers();
+    int outKey = key;
+
+    // Shift+記号系の正規化（Windows）:
+    // Shift を伴う数字/記号キーは ev->key() がシフト後の記号（'!' '"' '#' …、配列依存）へ
+    // 化ける。一方 parseKeyChord("Shift+1"/"Shift+;") は QKeySequence 経由で常に「シフト前の
+    // 基底キー」（Key_1 / Key_Semicolon）を登録するため、そのままだと逆引きに一致しない。
+    // nativeVirtualKey から基底キーを復元してマップと揃える。
+    // テンキー（VK_NUMPAD0..9 = 0x60..0x69）は下記いずれの分岐にも入らず無影響。
+#ifdef Q_OS_WIN
+    if (mods & Qt::ShiftModifier) {
+        const quint32 vk = ev->nativeVirtualKey();
+        if (vk >= 0x30 && vk <= 0x39) {
+            // 数字行: VK '0'..'9' == Qt::Key_0..Key_9（決定的）
+            outKey = Qt::Key_0 + static_cast<int>(vk - 0x30);
+        } else if (vk != 0) {
+            // OEM 記号など: 現在のレイアウトのシフト前基底文字を取得して Qt::Key へ。
+            // Qt::Key は ASCII 印字文字のコードと一致するため文字コードをそのまま使える
+            // （デッドキーは最上位ビットで示されるが、ショートカット用途では対象外）。
+            const UINT ch = ::MapVirtualKeyW(vk, MAPVK_VK_TO_CHAR) & 0xFFFFu;
+            if (ch != 0) {
+                outKey = static_cast<int>(QChar(static_cast<ushort>(ch)).toUpper().unicode());
+            }
+        }
+    }
+#endif
+
+    return KeyChord{outKey, mods};
 }
 
 // ---- buildReverseMap ----

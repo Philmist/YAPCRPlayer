@@ -177,6 +177,59 @@ private slots:
         QCOMPARE(c, *numChord);
     }
 
+    // Shift+数字行: 実機では key() がシフト記号へ化けるが、nativeVirtualKey から
+    // 基底キー(Key_0..9)へ正規化され parseKeyChord("Shift+N") と一致すること。
+    // （数字行は VK 直変換のため OS レイアウトに依存せず決定的にテストできる）
+    void testKeyChordFromEvent_shiftDigit_data() {
+        QTest::addColumn<int>("mangledKey");    // 化けた key()（US配列例）
+        QTest::addColumn<quint32>("vk");        // nativeVirtualKey（VK '0'..'9'）
+        QTest::addColumn<QString>("shortcut");  // 対応する登録文字列
+
+        QTest::newRow("Shift+1") << (int)Qt::Key_Exclam     << 0x31u << QStringLiteral("Shift+1");
+        QTest::newRow("Shift+2") << (int)Qt::Key_At         << 0x32u << QStringLiteral("Shift+2");
+        QTest::newRow("Shift+3") << (int)Qt::Key_NumberSign << 0x33u << QStringLiteral("Shift+3");
+        QTest::newRow("Shift+4") << (int)Qt::Key_Dollar     << 0x34u << QStringLiteral("Shift+4");
+        QTest::newRow("Shift+5") << (int)Qt::Key_Percent    << 0x35u << QStringLiteral("Shift+5");
+        QTest::newRow("Shift+6") << (int)Qt::Key_AsciiCircum<< 0x36u << QStringLiteral("Shift+6");
+        QTest::newRow("Shift+7") << (int)Qt::Key_Ampersand  << 0x37u << QStringLiteral("Shift+7");
+        QTest::newRow("Shift+8") << (int)Qt::Key_Asterisk   << 0x38u << QStringLiteral("Shift+8");
+        QTest::newRow("Shift+9") << (int)Qt::Key_ParenLeft  << 0x39u << QStringLiteral("Shift+9");
+        QTest::newRow("Shift+0") << (int)Qt::Key_ParenRight << 0x30u << QStringLiteral("Shift+0");
+    }
+
+    void testKeyChordFromEvent_shiftDigit() {
+        QFETCH(int, mangledKey);
+        QFETCH(quint32, vk);
+        QFETCH(QString, shortcut);
+
+        // nativeVirtualKey を渡せる詳細コンストラクタで実イベントを模す
+        QKeyEvent ev(QEvent::KeyPress, (Qt::Key)mangledKey, Qt::ShiftModifier,
+                     /*nativeScanCode*/0u, /*nativeVirtualKey*/vk, /*nativeModifiers*/0u,
+                     QStringLiteral("x"));
+        const KeyChord c = keyChordFromEvent(&ev);
+
+        // parseKeyChord("Shift+N") と一致 → 逆引きマップにヒットする
+        const auto reg = parseKeyChord(shortcut);
+        QVERIFY(reg.has_value());
+        QCOMPARE(c, *reg);
+    }
+
+    // dispatch レベルの回帰: Shift+1 の実イベントが SizePreset1 を発火すること
+    void testKeyChordFromEvent_shiftDigitDispatch() {
+        ActionRegistry reg;
+        reg.setKeyMap(defaultKeyMap());
+
+        bool fired = false;
+        reg.on(ActionId::SizePreset1, [&fired]{ fired = true; });
+
+        QKeyEvent ev(QEvent::KeyPress, Qt::Key_Exclam, Qt::ShiftModifier,
+                     /*nativeScanCode*/0u, /*nativeVirtualKey*/0x31u, /*nativeModifiers*/0u,
+                     QStringLiteral("!"));
+        const KeyChord c = keyChordFromEvent(&ev);
+        QVERIFY(reg.dispatch(c));
+        QVERIFY(fired);
+    }
+
     // ------------------------------------------------------------------
     // 6. ActionRegistry: on / trigger / dispatch
     // ------------------------------------------------------------------
