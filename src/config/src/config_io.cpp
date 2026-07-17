@@ -155,6 +155,7 @@ Config parseTable(const toml::table& root)
         c.restore.aspect   = getBoolOr(*r, "aspect",   c.restore.aspect);
         c.restore.volume   = getBoolOr(*r, "volume",   c.restore.volume);
         c.restore.mute     = getBoolOr(*r, "mute",     c.restore.mute);
+        c.restore.bars     = getBoolOr(*r, "bars",     c.restore.bars);
     }
 
     // ---- [shortcuts] ----
@@ -249,6 +250,8 @@ Config parseTable(const toml::table& root)
         c.state.fit_mode  = getStringOr(*s, "fit_mode",  c.state.fit_mode);
         c.state.aspect_x  = getIntOr   (*s, "aspect_x",  c.state.aspect_x);
         c.state.aspect_y  = getIntOr   (*s, "aspect_y",  c.state.aspect_y);
+        c.state.menubar_visible   = getBoolOr(*s, "menubar_visible",   c.state.menubar_visible);
+        c.state.statusbar_visible = getBoolOr(*s, "statusbar_visible", c.state.statusbar_visible);
     }
 
     return c;
@@ -277,6 +280,7 @@ toml::table buildTable(const Config& c)
         {"aspect",   c.restore.aspect},
         {"volume",   c.restore.volume},
         {"mute",     c.restore.mute},
+        {"bars",     c.restore.bars},
     }});
 
     // [shortcuts]
@@ -359,6 +363,8 @@ toml::table buildTable(const Config& c)
         {"fit_mode",  ss(c.state.fit_mode)},
         {"aspect_x",  static_cast<int64_t>(c.state.aspect_x)},
         {"aspect_y",  static_cast<int64_t>(c.state.aspect_y)},
+        {"menubar_visible",   c.state.menubar_visible},
+        {"statusbar_visible", c.state.statusbar_visible},
     }});
 
     return root;

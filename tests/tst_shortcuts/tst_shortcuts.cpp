@@ -517,6 +517,32 @@ private slots:
         QCOMPARE(restoredMute(r, s, true), true);  // カスタム fallback
     }
 
+    // restoredMenubarVisible / restoredStatusbarVisible: restore.bars トグル
+    void testRestoredBars() {
+        RestoreConfig r;
+        StateConfig   s;
+
+        // restore.bars=true → state の値を返す
+        r.bars = true;
+        s.menubar_visible = false;
+        s.statusbar_visible = false;
+        QCOMPARE(restoredMenubarVisible(r, s),   false);
+        QCOMPARE(restoredStatusbarVisible(r, s), false);
+        s.menubar_visible = true;
+        s.statusbar_visible = true;
+        QCOMPARE(restoredMenubarVisible(r, s),   true);
+        QCOMPARE(restoredStatusbarVisible(r, s), true);
+
+        // restore.bars=false → fallback (既定 true)
+        r.bars = false;
+        s.menubar_visible = false;
+        s.statusbar_visible = false;
+        QCOMPARE(restoredMenubarVisible(r, s),   true);
+        QCOMPARE(restoredStatusbarVisible(r, s), true);
+        QCOMPARE(restoredMenubarVisible(r, s, false),   false);  // カスタム fallback
+        QCOMPARE(restoredStatusbarVisible(r, s, false), false);
+    }
+
     // restoredGeometry: position/size トグルとデフォルト値
     void testRestoredGeometry() {
         RestoreConfig r;

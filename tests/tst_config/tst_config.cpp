@@ -44,6 +44,7 @@ private slots:
         QCOMPARE(back.restore.aspect,   orig.restore.aspect);
         QCOMPARE(back.restore.volume,   orig.restore.volume);
         QCOMPARE(back.restore.mute,     orig.restore.mute);
+        QCOMPARE(back.restore.bars,     orig.restore.bars);
 
         // [display]
         QCOMPARE(back.display.fit_mode,        orig.display.fit_mode);
@@ -78,6 +79,8 @@ private slots:
         QCOMPARE(back.state.volume,   orig.state.volume);
         QCOMPARE(back.state.mute,     orig.state.mute);
         QCOMPARE(back.state.sage,     orig.state.sage);
+        QCOMPARE(back.state.menubar_visible,   orig.state.menubar_visible);
+        QCOMPARE(back.state.statusbar_visible, orig.state.statusbar_visible);
 
         // [shortcuts] — キー集合が一致すること（並び順は問わない）
         QCOMPARE(back.shortcuts.keys(), orig.shortcuts.keys());

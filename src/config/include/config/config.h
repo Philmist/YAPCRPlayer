@@ -29,6 +29,7 @@ struct RestoreConfig {
     bool aspect  {false};
     bool volume  {true};
     bool mute    {true};
+    bool bars    {true};    // メニューバー/ステータスバーの表示状態を復元する
 };
 
 struct DisplayConfig {
@@ -72,6 +73,9 @@ struct StateConfig {
     QString fit_mode{QStringLiteral("inscribe")};  // "inscribe"/"stretch"/"fill"/"unscaled"
     int     aspect_x{0};  // アスペクト比 X（0 = デフォルト内接）
     int     aspect_y{0};  // アスペクト比 Y
+    // restore.bars=true のとき復元するメニューバー/ステータスバー表示状態
+    bool    menubar_visible  {true};
+    bool    statusbar_visible{true};
 };
 
 // ---------- トップレベル ----------

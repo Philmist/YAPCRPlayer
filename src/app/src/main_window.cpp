@@ -954,6 +954,17 @@ MainWindow::MainWindow(const config::Config& cfg,
         }
     }
 
+    // メニューバー/ステータスバー表示状態の起動時復元（restore.bars=true のとき）。
+    // トグルアクション（actToggleTitle_/actToggleStatus_）確定後のこの位置で適用する。
+    {
+        const bool mb = restoredMenubarVisible(config_.restore, config_.state);
+        menuBar()->setVisible(mb);
+        if (actToggleTitle_)  { actToggleTitle_->setChecked(mb); }
+        const bool sb = restoredStatusbarVisible(config_.restore, config_.state);
+        statusBar()->setVisible(sb);
+        if (actToggleStatus_) { actToggleStatus_->setChecked(sb); }
+    }
+
     // ウィンドウタイトルの初期値（channelTitle_ が空のためアプリ名のみ）
     updateWindowTitle();
 
@@ -1359,6 +1370,9 @@ void MainWindow::closeEvent(QCloseEvent* event)
     config_.state.fit_mode  = fitModeToString(currentFit_);
     config_.state.aspect_x  = currentAspectX_;
     config_.state.aspect_y  = currentAspectY_;
+    // メニューバー/ステータスバー表示状態（フルスクリーン中も UI 維持のため isVisible() が正確）。
+    config_.state.menubar_visible   = menuBar()->isVisible();
+    config_.state.statusbar_visible = statusBar()->isVisible();
 
     config::save(config_, configPath_);
     QMainWindow::closeEvent(event);

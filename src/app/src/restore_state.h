@@ -29,6 +29,22 @@ inline bool restoredMute(const config::RestoreConfig& r,
     return r.mute ? s.mute : fallback;
 }
 
+// [restore].bars が true なら [state].menubar_visible を返す。false なら fallback（既定 true）。
+inline bool restoredMenubarVisible(const config::RestoreConfig& r,
+                                   const config::StateConfig&   s,
+                                   bool fallback = true)
+{
+    return r.bars ? s.menubar_visible : fallback;
+}
+
+// [restore].bars が true なら [state].statusbar_visible を返す。false なら fallback（既定 true）。
+inline bool restoredStatusbarVisible(const config::RestoreConfig& r,
+                                     const config::StateConfig&   s,
+                                     bool fallback = true)
+{
+    return r.bars ? s.statusbar_visible : fallback;
+}
+
 // 起動時に適用するウィンドウジオメトリ。
 //   applyPosition: true なら (x,y) を move する。
 //   applySize    : true なら (w,h) を resize する。false なら defW/defH を使う。
