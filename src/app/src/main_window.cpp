@@ -1400,11 +1400,18 @@ void MainWindow::buildContextMenu()
 {
     contextMenu_ = new QMenu(this);
 
-    // ---- ファイル ----
-    contextMenu_->addAction(tr("開く..."), this,
-        [this]{ registry_.trigger(ActionId::OpenFileDialog); });
-    contextMenu_->addAction(tr("クリップボードから開く"), this,
-        [this]{ registry_.trigger(ActionId::OpenFromClipboard); });
+    // ---- 表示倍率（既存 QAction を再利用: チェック状態は自動同期）----
+    {
+        QMenu* sub = contextMenu_->addMenu(tr("表示倍率"));
+        sub->addAction(actFreeSize_);
+        for (QAction* a : actZoomPresets_) { sub->addAction(a); }
+    }
+
+    // ---- サイズ（既存 QAction を再利用）----
+    {
+        QMenu* sub = contextMenu_->addMenu(tr("サイズ"));
+        for (QAction* a : actSizePresets_) { sub->addAction(a); }
+    }
     contextMenu_->addSeparator();
 
     // ---- 再生制御 ----
@@ -1436,18 +1443,11 @@ void MainWindow::buildContextMenu()
         [this]{ registry_.trigger(ActionId::OpenContactInBrowser); });
     contextMenu_->addSeparator();
 
-    // ---- 表示倍率（既存 QAction を再利用: チェック状態は自動同期）----
-    {
-        QMenu* sub = contextMenu_->addMenu(tr("表示倍率"));
-        sub->addAction(actFreeSize_);
-        for (QAction* a : actZoomPresets_) { sub->addAction(a); }
-    }
-
-    // ---- サイズ（既存 QAction を再利用）----
-    {
-        QMenu* sub = contextMenu_->addMenu(tr("サイズ"));
-        for (QAction* a : actSizePresets_) { sub->addAction(a); }
-    }
+    // ---- ファイル ----
+    contextMenu_->addAction(tr("開く..."), this,
+        [this]{ registry_.trigger(ActionId::OpenFileDialog); });
+    contextMenu_->addAction(tr("クリップボードから開く"), this,
+        [this]{ registry_.trigger(ActionId::OpenFromClipboard); });
     contextMenu_->addSeparator();
 
     // ---- その他 ----
