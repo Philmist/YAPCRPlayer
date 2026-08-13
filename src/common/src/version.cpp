@@ -7,7 +7,7 @@ const char* appName() {
 }
 
 const char* appVersion() {
-    return "0.2.0";
+    return "0.2.1";
 }
 
 }  // namespace yapcr::common
