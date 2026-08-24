@@ -3,6 +3,8 @@
 **YAPCRPlayer** はPeerCast実況配信向けの Windows デスクトッププレイヤーです。
 [libmpv](https://mpv.io/) で映像再生し、2ch互換掲示板/したらば系の掲示板をインライン表示・書き込みできます。
 
+使い方については[`HowToUse.md`](./HowToUse.md)をご覧ください。
+
 本ソフトウェアは narayado氏 による
 [**PCRPlayer**](http://pecatv.s25.xrea.com/)（Copyright © 2019, GPL）を
 libmpv / Qt6 ベースで再実装した派生版です（詳細は[ライセンス](#ライセンス)節）。
